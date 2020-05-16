@@ -2,21 +2,26 @@
 %
 % Filename: get_config.m
 %
-% Description:
+% Description: Takes a default parameter structure along with user-defined
+%     parameters and merges them by overriding the defaults with user values
 %
 % Date: 04/30/14
 %
 % Author:
-%       Joseph Kirk
-%       jdkirk630@gmail.com
+%     Joseph Kirk
+%     jdkirk630@gmail.com
 %
 % Inputs:
+%     defaultConfig - structure containing default parameters
+%     userConfig    - structure containing user-defined parameters
 %
 % Outputs:
+%     config        - structure containing the full merged parameter set
 %
 % Usage:
+%     config = get_config(defaultConfig,userConfig);
 %
-% See also:
+% See also: fieldnames
 %
 function config = get_config(defaultConfig,userConfig)
     
