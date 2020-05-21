@@ -112,6 +112,7 @@ function varargout = mtsp_ga_turbo(varargin)
     defaultConfig.popSize     = 80;
     defaultConfig.numIter     = 1e4;
     defaultConfig.showProg    = true;
+    defaultConfig.showStatus  = true;
     defaultConfig.showResult  = true;
     defaultConfig.showWaitbar = false;
     
@@ -148,6 +149,7 @@ function varargout = mtsp_ga_turbo(varargin)
     popSize     = configStruct.popSize;
     numIter     = configStruct.numIter;
     showProg    = configStruct.showProg;
+    showStatus  = configStruct.showStatus;
     showResult  = configStruct.showResult;
     showWaitbar = configStruct.showWaitbar;
     if isempty(dmat)
@@ -176,6 +178,7 @@ function varargout = mtsp_ga_turbo(varargin)
     popSize     = 1+7*ceil((popSize-1)/7);
     numIter     = max(1,round(real(numIter(1))));
     showProg    = logical(showProg(1));
+    showStatus  = logical(showStatus(1));
     showResult  = logical(showResult(1));
     showWaitbar = logical(showWaitbar(1));
     
@@ -237,18 +240,23 @@ function varargout = mtsp_ga_turbo(varargin)
     globalMin = Inf;
     localMin = Inf;
     % totalDist = zeros(1,popSize);
-    distHistory = zeros(1,numIter);
+    distHistory = NaN(1,numIter);
     fullHistory = zeros(popSize,numIter);
     tmpPopRoute = zeros(7,n);
     tmpPopBreak = zeros(7,nBreaks);
     newPopRoute = zeros(popSize,n);
     newPopBreak = zeros(popSize,nBreaks);
+    [isStopped,isCancelled] = deal(false);
     if showProg
-        figure('Name','MTSP_GA_TURBO | Current Best Solution','Numbertitle','off');
+        hFig = figure('Name','MTSP_GA_TURBO | Current Best Solution','Numbertitle','off');
         hAx = gca;
+        if showStatus
+            [hStatus,isCancelled] = figstatus(0,numIter,[],hFig);
+        end
     end
     if showWaitbar
-        hWait = waitbar(0,'Searching for near-optimal solution ...');
+        hWait = waitbar(0,'Searching for near-optimal solution ...', ...
+            'CreateCancelBtn',@cancel_search);
     end
     nSame = 0;
     for iter = 1:numIter
@@ -314,13 +322,28 @@ function varargout = mtsp_ga_turbo(varargin)
             end
         end
         distHistory(iter) = globalMin;
+        
+        
+        %
+        % Update the status bar and check cancellation status
+        %
+        if showProg && showStatus && ~mod(iter,ceil(numIter/100))
+            [hStatus,isCancelled] = figstatus(iter,numIter,hStatus,hFig);
+        end
+        if (isStopped || isCancelled)
+            break
+        end
+        
+        
+        %
+        % Determine whether to restart a stalled search
+        %
         if (minDist < localMin)
             localMin = minDist;
             nSame = 0;
         else
             nSame = nSame + 1;
         end
-        
         if (nSame >= 500)
             for p = 1:popSize
                 popRoute(p,:) = randperm(n);
@@ -380,8 +403,11 @@ function varargout = mtsp_ga_turbo(varargin)
         end
         
     end
+    if showProg && showStatus
+        figstatus(numIter,numIter,hStatus,hFig);
+    end
     if showWaitbar
-        close(hWait);
+        delete(hWait);
     end
     
     
@@ -394,6 +420,10 @@ function varargout = mtsp_ga_turbo(varargin)
         optSolution{s} = optRoute([rng(s,1):rng(s,2) rng(s,1)]);
     end
     
+    
+    %
+    % Show the final results
+    %
     if showResult
         
         %
@@ -455,6 +485,7 @@ function varargout = mtsp_ga_turbo(varargin)
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
             'plotMatrix',  plotMatrix, ...
+            'distHistory', distHistory, ...
             'minDist',     globalMin);
         
         varargout = {resultStruct};
@@ -478,6 +509,14 @@ function varargout = mtsp_ga_turbo(varargin)
             end
             breaks = minTour*(1:nBreaks) + cumsum(adjust);
         end
+    end
+    
+    
+    %
+    % Nested function to cancel search
+    %
+    function cancel_search(varargin)
+        isStopped = true;
     end
     
 end

@@ -91,6 +91,7 @@ function varargout = tsp_rs(varargin)
     defaultConfig.popSize     = Inf;
     defaultConfig.numIter     = 1e4;
     defaultConfig.showProg    = true;
+    defaultConfig.showStatus  = true;
     defaultConfig.showResult  = true;
     defaultConfig.showWaitbar = false;
     
@@ -125,6 +126,7 @@ function varargout = tsp_rs(varargin)
     popSize     = configStruct.popSize;
     numIter     = configStruct.numIter;
     showProg    = configStruct.showProg;
+    showStatus  = configStruct.showStatus;
     showResult  = configStruct.showResult;
     showWaitbar = configStruct.showWaitbar;
     if isempty(dmat)
@@ -151,6 +153,7 @@ function varargout = tsp_rs(varargin)
     popSize     = max(1,min(n,round(real(popSize(1)))));
     numIter     = max(1,round(real(numIter(1))));
     showProg    = logical(showProg(1));
+    showStatus  = logical(showStatus(1));
     showResult  = logical(showResult(1));
     showWaitbar = logical(showWaitbar(1));
     
@@ -169,13 +172,18 @@ function varargout = tsp_rs(varargin)
     % Run the GA
     %
     globalMin = Inf;
-    distHistory = zeros(1,numIter);
+    distHistory = NaN(1,numIter);
+    [isStopped,isCancelled] = deal(false);
     if showProg
-        figure('Name','TSP_RS | Current Best Solution','Numbertitle','off');
+        hFig = figure('Name','TSP_RS | Current Best Solution','Numbertitle','off');
         hAx = gca;
+        if showStatus
+            [hStatus,isCancelled] = figstatus(0,numIter,[],hFig);
+        end
     end
     if showWaitbar
-        hWait = waitbar(0,'Searching for near-optimal solution ...');
+        hWait = waitbar(0,'Searching for near-optimal solution ...', ...
+            'CreateCancelBtn',@cancel_search);
     end
     for iter = 1:numIter
         
@@ -227,6 +235,17 @@ function varargout = tsp_rs(varargin)
         
         
         %
+        % Update the status bar and check cancellation status
+        %
+        if showProg && showStatus && ~mod(iter,ceil(numIter/100))
+            [hStatus,isCancelled] = figstatus(iter,numIter,hStatus,hFig);
+        end
+        if (isStopped || isCancelled)
+            break
+        end
+        
+        
+        %
         % MODIFY THE POPULATION
         %   This section of code randomly searches for new solutions
         %
@@ -244,8 +263,11 @@ function varargout = tsp_rs(varargin)
         end
         
     end
+    if showProg && showStatus
+        figstatus(numIter,numIter,hStatus,hFig);
+    end
     if showWaitbar
-        close(hWait);
+        delete(hWait);
     end
     
     
@@ -255,6 +277,10 @@ function varargout = tsp_rs(varargin)
     index = find(optRoute == 1,1);
     optSolution = [optRoute([index:n 1:index-1]) 1];
     
+    
+    %
+    % Show the final results
+    %
     if showResult
         
         %
@@ -309,11 +335,20 @@ function varargout = tsp_rs(varargin)
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
             'plotMatrix',  plotMatrix, ...
+            'distHistory', distHistory, ...
             'minDist',     minDist, ...
             'pop',         pop);
         
         varargout = {resultStruct};
         
+    end
+    
+    
+    %
+    % Nested function to cancel search
+    %
+    function cancel_search(varargin)
+        isStopped = true;
     end
     
 end

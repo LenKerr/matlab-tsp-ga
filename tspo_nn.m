@@ -91,6 +91,7 @@ function varargout = tspo_nn(varargin)
     defaultConfig.dmat        = [];
     defaultConfig.popSize     = Inf;
     defaultConfig.showProg    = true;
+    defaultConfig.showStatus  = true;
     defaultConfig.showResult  = true;
     defaultConfig.showWaitbar = false;
     
@@ -124,6 +125,7 @@ function varargout = tspo_nn(varargin)
     dmat        = configStruct.dmat;
     popSize     = configStruct.popSize;
     showProg    = configStruct.showProg;
+    showStatus  = configStruct.showStatus;
     showResult  = configStruct.showResult;
     showWaitbar = configStruct.showWaitbar;
     if isempty(dmat)
@@ -149,6 +151,7 @@ function varargout = tspo_nn(varargin)
     %
     popSize     = max(1,min(n,round(real(popSize(1)))));
     showProg    = logical(showProg(1));
+    showStatus  = logical(showStatus(1));
     showResult  = logical(showResult(1));
     showWaitbar = logical(showWaitbar(1));
     
@@ -162,13 +165,18 @@ function varargout = tspo_nn(varargin)
     %
     % Run the NN
     %
-    distHistory = zeros(1,popSize);
+    distHistory = NaN(1,popSize);
+    [isStopped,isCancelled] = deal(false);
     if showProg
-        figure('Name','TSPO_NN | Current Solution','Numbertitle','off');
+        hFig = figure('Name','TSPO_NN | Current Solution','Numbertitle','off');
         hAx = gca;
+        if showStatus
+            [hStatus,isCancelled] = figstatus(0,popSize,[],hFig);
+        end
     end
     if showWaitbar
-        hWait = waitbar(0,'Searching for near-optimal solution ...');
+        hWait = waitbar(0,'Searching for near-optimal solution ...', ...
+            'CreateCancelBtn',@cancel_search);
     end
     for p = 1:popSize
         d = 0;
@@ -203,6 +211,17 @@ function varargout = tspo_nn(varargin)
         
         
         %
+        % Update the status bar and check cancellation status
+        %
+        if showProg && showStatus && ~mod(p,ceil(popSize/100))
+            [hStatus,isCancelled] = figstatus(p,popSize,hStatus,hFig);
+        end
+        if (isStopped || isCancelled)
+            break
+        end
+        
+        
+        %
         % Update the waitbar
         %
         if showWaitbar && ~mod(p,ceil(popSize/325))
@@ -210,8 +229,11 @@ function varargout = tspo_nn(varargin)
         end
         
     end
+    if showProg && showStatus
+        figstatus(popSize,popSize,hStatus,hFig);
+    end
     if showWaitbar
-        close(hWait);
+        delete(hWait);
     end
     
     
@@ -221,6 +243,10 @@ function varargout = tspo_nn(varargin)
     [minDist,index] = min(distHistory);
     optRoute = pop(index,:);
     
+    
+    %
+    % Show the final results
+    %
     if showResult
         if showProg
             
@@ -283,11 +309,20 @@ function varargout = tspo_nn(varargin)
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
             'plotMatrix',  plotMatrix, ...
+            'distHistory', distHistory, ...
             'minDist',     minDist, ...
             'pop',         pop);
         
         varargout = {resultStruct};
         
+    end
+    
+    
+    %
+    % Nested function to cancel search
+    %
+    function cancel_search(varargin)
+        isStopped = true;
     end
     
 end

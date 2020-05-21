@@ -118,6 +118,7 @@ function varargout = mtspof_ga(varargin)
     defaultConfig.popSize     = 80;
     defaultConfig.numIter     = 5e3;
     defaultConfig.showProg    = true;
+    defaultConfig.showStatus  = true;
     defaultConfig.showResult  = true;
     defaultConfig.showWaitbar = false;
     
@@ -154,6 +155,7 @@ function varargout = mtspof_ga(varargin)
     popSize     = configStruct.popSize;
     numIter     = configStruct.numIter;
     showProg    = configStruct.showProg;
+    showStatus  = configStruct.showStatus;
     showResult  = configStruct.showResult;
     showWaitbar = configStruct.showWaitbar;
     if isempty(dmat)
@@ -182,6 +184,7 @@ function varargout = mtspof_ga(varargin)
     popSize     = max(8,8*ceil(popSize(1)/8));
     numIter     = max(1,round(real(numIter(1))));
     showProg    = logical(showProg(1));
+    showStatus  = logical(showStatus(1));
     showResult  = logical(showResult(1));
     showWaitbar = logical(showWaitbar(1));
     
@@ -244,17 +247,22 @@ function varargout = mtspof_ga(varargin)
     col = zeros(popSize,n+nSalesmen);
     isValid = false(1,n+nSalesmen);
     globalMin = Inf;
-    distHistory = zeros(1,numIter);
+    distHistory = NaN(1,numIter);
     tmpPopRoute = zeros(8,n);
     tmpPopBreak = zeros(8,nBreaks);
     newPopRoute = zeros(popSize,n);
     newPopBreak = zeros(popSize,nBreaks);
+    [isStopped,isCancelled] = deal(false);
     if showProg
-        figure('Name','MTSPOF_GA | Current Best Solution','Numbertitle','off');
+        hFig = figure('Name','MTSPOF_GA | Current Best Solution','Numbertitle','off');
         hAx = gca;
+        if showStatus
+            [hStatus,isCancelled] = figstatus(0,numIter,[],hFig);
+        end
     end
     if showWaitbar
-        hWait = waitbar(0,'Searching for near-optimal solution ...');
+        hWait = waitbar(0,'Searching for near-optimal solution ...', ...
+            'CreateCancelBtn',@cancel_search);
     end
     for iter = 1:numIter
         
@@ -333,6 +341,17 @@ function varargout = mtspof_ga(varargin)
         
         
         %
+        % Update the status bar and check cancellation status
+        %
+        if showProg && showStatus && ~mod(iter,ceil(numIter/100))
+            [hStatus,isCancelled] = figstatus(iter,numIter,hStatus,hFig);
+        end
+        if (isStopped || isCancelled)
+            break
+        end
+        
+        
+        %
         % MODIFY THE POPULATION
         %   This section of code invokes the genetic algorithm operators.
         %   In this implementation, solutions are randomly assigned to groups
@@ -393,8 +412,11 @@ function varargout = mtspof_ga(varargin)
         end
         
     end
+    if showProg && showStatus
+        figstatus(numIter,numIter,hStatus,hFig);
+    end
     if showWaitbar
-        close(hWait);
+        delete(hWait);
     end
     
     
@@ -407,6 +429,10 @@ function varargout = mtspof_ga(varargin)
         optSolution{s} = [1 optRoute(rng(s,1):rng(s,2)) N];
     end
     
+    
+    %
+    % Show the final results
+    %
     if showResult
         
         %
@@ -473,6 +499,7 @@ function varargout = mtspof_ga(varargin)
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
             'plotMatrix',  plotMatrix, ...
+            'distHistory', distHistory, ...
             'minDist',     minDist);
         
         varargout = {resultStruct};
@@ -496,6 +523,14 @@ function varargout = mtspof_ga(varargin)
             end
             breaks = minTour*(1:nBreaks) + cumsum(adjust);
         end
+    end
+    
+    
+    %
+    % Nested function to cancel search
+    %
+    function cancel_search(varargin)
+        isStopped = true;
     end
     
 end

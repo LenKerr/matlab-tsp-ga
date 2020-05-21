@@ -1,15 +1,16 @@
-% MTSPOF_GA_BASES Open Multiple Traveling Salesmen Problem (M-TSP) Genetic Algorithm (GA)
+% MTSP_GA_COMBO Multiple Traveling Salesmen Problem (M-TSP) Genetic Algorithm (GA)
 %   Finds a (near) optimal solution to the M-TSP by setting up a GA to search
 %   for the shortest route (least distance needed for the salesmen to travel
-%   to each city exactly once without returning to their starting locations)
+%   to each city exactly once and return to their starting locations)
+%
+% Notes:
+%     1. Objective function uses a combination of the "minmax" and "minsum"
+%        approaches (compare with "mtsp_ga_minmax" and "mtsp_ga_minsum")
 %
 % Summary:
-%     1. Each salesman starts at different first points, and ends at different
-%        last points, and travels to a unique set of cities in between (none of
-%        them close their loops by returning to their starting points)
-%     2. Each city is visited by exactly one salesman exactly one time
-%     3. Salesmen have individual "base" cities which they start from and
-%        different (assigned) individual cities which they stop at
+%     1. Each salesman travels to a unique set of cities and completes the
+%        route by returning to the city he started from
+%     2. Each city is visited by exactly one salesman
 %
 % Input:
 %     USERCONFIG (structure) with zero or more of the following fields:
@@ -37,37 +38,37 @@
 %     - MINDIST (scalar float) is the total distance traveled by the salesmen
 %
 % Route/Breakpoint Details:
-%     If there are 13 cities and 3 salesmen, a possible route/break
-%     combination might be: rte = [5 6 9 4 8 10 7], brks = [3 5]
-%     Taken together, these represent the solution [1 5 6 9 13][2 4 8 12][3 10 7 11],
+%     If there are 10 cities and 3 salesmen, a possible route/break
+%     combination might be: rte = [5 6 9 1 4 2 8 10 3 7], brks = [3 7]
+%     Taken together, these represent the solution [5 6 9][1 4 2 8][10 3 7],
 %     which designates the routes for the 3 salesmen as follows:
-%         . Salesman 1 travels from city 1 to 5 to 6 to 9 to 13
-%         . Salesman 2 travels from city 2 to 4 to 8 to 12
-%         . Salesman 3 travels from city 3 to 10 to 7 to 11
+%         . Salesman 1 travels from city 5 to 6 to 9 and back to 5
+%         . Salesman 2 travels from city 1 to 4 to 2 to 8 and back to 1
+%         . Salesman 3 travels from city 10 to 3 to 7 and back to 10
 %
 % Usage:
-%     mtspof_ga_bases
+%     mtsp_ga_combo
 %       -or-
-%     mtspof_ga_bases(userConfig)
+%     mtsp_ga_combo(userConfig)
 %       -or-
-%     resultStruct = mtspof_ga_bases;
+%     resultStruct = mtsp_ga_combo;
 %       -or-
-%     resultStruct = mtspof_ga_bases(userConfig);
+%     resultStruct = mtsp_ga_combo(userConfig);
 %       -or-
-%     [...] = mtspof_ga_bases('Param1',Value1,'Param2',Value2, ...);
+%     [...] = mtsp_ga_combo('Param1',Value1,'Param2',Value2, ...);
 %
 % Example:
 %     % Let the function create an example problem to solve
-%     mtspof_ga_bases;
+%     mtsp_ga_combo;
 %
 % Example:
 %     % Request the output structure from the solver
-%     resultStruct = mtspof_ga_bases;
+%     resultStruct = mtsp_ga_combo;
 %
 % Example:
 %     % Pass a random set of user-defined XY points to the solver
 %     userConfig = struct('xy',10*rand(35,2));
-%     resultStruct = mtspof_ga_bases(userConfig);
+%     resultStruct = mtsp_ga_combo(userConfig);
 %
 % Example:
 %     % Pass a more interesting set of XY points to the solver
@@ -78,31 +79,31 @@
 %     [x,y] = pol2cart(theta(:),rho(:));
 %     xy = 10*([x y]-min([x;y]))/(max([x;y])-min([x;y]));
 %     userConfig = struct('xy',xy);
-%     resultStruct = mtspof_ga_bases(userConfig);
+%     resultStruct = mtsp_ga_combo(userConfig);
 %
 % Example:
 %     % Pass a random set of 3D (XYZ) points to the solver
 %     xyz = 10*rand(35,3);
 %     userConfig = struct('xy',xyz);
-%     resultStruct = mtspof_ga_bases(userConfig);
+%     resultStruct = mtsp_ga_combo(userConfig);
 %
 % Example:
 %     % Change the defaults for GA population size and number of iterations
 %     userConfig = struct('popSize',200,'numIter',1e4);
-%     resultStruct = mtspof_ga_bases(userConfig);
+%     resultStruct = mtsp_ga_combo(userConfig);
 %
 % Example:
 %     % Turn off the plots but show a waitbar
 %     userConfig = struct('showProg',false,'showResult',false,'showWaitbar',true);
-%     resultStruct = mtspof_ga_bases(userConfig);
+%     resultStruct = mtsp_ga_combo(userConfig);
 %
-% See also: tsp_ga, mtsp_ga, mtspf_ga, mtspo_ga, mtspof_ga, mtspofs_ga, distmat
+% See also: tsp_ga, mtspf_ga, mtspo_ga, mtspof_ga, mtspofs_ga, mtspv_ga, distmat
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
 % Release: 2.0
 % Release Date: 05/01/2014
-function varargout = mtspof_ga_bases(varargin)
+function varargout = mtsp_ga_combo(varargin)
     
     
     %
@@ -170,13 +171,13 @@ function varargout = mtspof_ga_bases(varargin)
     if (N ~= nr) || (N ~= nc)
         error('Invalid XY or DMAT inputs!')
     end
-    n = N - 2*nSalesmen;
+    n = N;
     
     
     %
     % Sanity checks
     %
-    % nSalesmen = max(1,min(n,round(real(nSalesmen(1)))));
+    nSalesmen   = max(1,min(n,round(real(nSalesmen(1)))));
     minTour     = max(1,min(floor(n/nSalesmen),round(real(minTour(1)))));
     popSize     = max(8,8*ceil(popSize(1)/8));
     numIter     = max(1,round(real(numIter(1))));
@@ -203,10 +204,10 @@ function varargout = mtspof_ga_bases(varargin)
     %
     popRoute = zeros(popSize,n);         % population of routes
     popBreak = zeros(popSize,nBreaks);   % population of breaks
-    popRoute(1,:) = (1:n) + nSalesmen;
+    popRoute(1,:) = (1:n);
     popBreak(1,:) = rand_breaks();
     for k = 2:popSize
-        popRoute(k,:) = randperm(n) + nSalesmen;
+        popRoute(k,:) = randperm(n);
         popBreak(k,:) = rand_breaks();
     end
     
@@ -240,18 +241,19 @@ function varargout = mtspof_ga_bases(varargin)
     %
     % Run the GA
     %
-    row = zeros(popSize,n+nSalesmen);
-    col = zeros(popSize,n+nSalesmen);
-    isValid = false(1,n+nSalesmen);
     globalMin = Inf;
+    maxDist = zeros(1,popSize);
+    totalDist = zeros(1,popSize);
     distHistory = NaN(1,numIter);
+    totalDistHistory = NaN(1,numIter);
+    maxIndividualDistHistory = NaN(1,numIter);
     tmpPopRoute = zeros(8,n);
     tmpPopBreak = zeros(8,nBreaks);
     newPopRoute = zeros(popSize,n);
     newPopBreak = zeros(popSize,nBreaks);
     [isStopped,isCancelled] = deal(false);
     if showProg
-        hFig = figure('Name','MTSPOF_GA_BASES | Current Best Solution','Numbertitle','off');
+        hFig = figure('Name','MTSP_GA_COMBO | Current Best Solution','Numbertitle','off');
         hAx = gca;
         if showStatus
             [hStatus,isCancelled] = figstatus(0,numIter,[],hFig);
@@ -264,42 +266,26 @@ function varargout = mtspof_ga_bases(varargin)
     for iter = 1:numIter
         
         %
-        % EVALUATE SOLUTIONS
-        %   This section of code computes the total cost of each solution
-        %   in the population. The actual code that gets executed uses a
-        %   much faster (vectorized) method to calculate the route lengths
-        %   compared to the triple for-loop below (provided for reference)
-        %   but gives the same result.
-        %
-        %     totalDist = zeros(popSize,1);
-        %     for p = 1:popSize
-        %         d = 0;
-        %         pRoute = popRoute(p,:);
-        %         pBreak = popBreak(p,:);
-        %         rng = [[1 pBreak+1];[pBreak n]]';
-        %         for s = 1:nSalesmen
-        %             d = d + dmat(s,pRoute(rng(s,1)));
-        %             for k = rng(s,1):rng(s,2)-1
-        %                 d = d + dmat(pRoute(k),pRoute(k+1));
-        %             end
-        %             d = d + dmat(pRoute(rng(s,2)),N-s+1);
-        %         end
-        %         totalDist(p) = d;
-        %     end
+        % Evaluate members of the population
         %
         for p = 1:popSize
-            brk = popBreak(p,:);
-            isValid(:) = false;
-            isValid([1 brk+(2:nSalesmen)]) = true;
-            row(p,isValid) = (1:nSalesmen);
-            row(p,~isValid) = popRoute(p,:);
-            isValid(:) = false;
-            isValid([brk+(1:nSalesmen-1) n+nSalesmen]) = true;
-            col(p,isValid) = 1+N-(1:nSalesmen);
-            col(p,~isValid) = popRoute(p,:);
+            dMax = 0;
+            dTotal = 0;
+            pRoute = popRoute(p,:);
+            pBreak = popBreak(p,:);
+            rng = [[1 pBreak+1];[pBreak n]]';
+            for s = 1:nSalesmen
+                d = dmat(pRoute(rng(s,2)),pRoute(rng(s,1)));
+                for k = rng(s,1):rng(s,2)-1
+                    d = d + dmat(pRoute(k),pRoute(k+1));
+                end
+                dMax = max(d,dMax);
+                dTotal = dTotal + d;
+            end
+            maxDist(p) = dMax;
+            totalDist(p) = dTotal;
         end
-        ind = N*(col-1) + row;
-        totalDist = sum(dmat(ind),2);
+        distCombined = maxDist + totalDist;
         
         
         %
@@ -307,7 +293,9 @@ function varargout = mtspof_ga_bases(varargin)
         %   This section of code finds the best solution in the current
         %   population and stores it if it is better than the previous best.
         %
-        [minDist,index] = min(totalDist);
+        [minDist,index] = min(distCombined);
+        totalDistHistory(iter) = totalDist(index);
+        maxIndividualDistHistory(iter) = maxDist(index);
         distHistory(iter) = minDist;
         if (minDist < globalMin)
             globalMin = minDist;
@@ -320,15 +308,10 @@ function varargout = mtspof_ga_bases(varargin)
                 % Plot the best route
                 %
                 for s = 1:nSalesmen
-                    e = N-s+1;
-                    rte = [s optRoute(rng(s,1):rng(s,2)) e];
+                    rte = optRoute([rng(s,1):rng(s,2) rng(s,1)]);
                     if (dims > 2), plot3(hAx,xy(rte,1),xy(rte,2),xy(rte,3),'.-','Color',clr(s,:));
                     else, plot(hAx,xy(rte,1),xy(rte,2),'.-','Color',clr(s,:)); end
                     hold(hAx,'on');
-                    if (dims > 2), plot3(hAx,xy(s,1),xy(s,2),xy(s,3),'s','Color',clr(s,:));
-                    else, plot(hAx,xy(s,1),xy(s,2),'s','Color',clr(s,:)); end
-                    if (dims > 2), plot3(hAx,xy(e,1),xy(e,2),xy(e,3),'o','Color',clr(s,:));
-                    else, plot(hAx,xy(e,1),xy(e,2),'o','Color',clr(s,:)); end
                 end
                 title(hAx,sprintf('Total Distance = %1.4f, Iteration = %d',minDist,iter));
                 hold(hAx,'off');
@@ -363,7 +346,7 @@ function varargout = mtspof_ga_bases(varargin)
         for p = 8:8:popSize
             rtes = popRoute(randomOrder(p-7:p),:);
             brks = popBreak(randomOrder(p-7:p),:);
-            dists = totalDist(randomOrder(p-7:p));
+            dists = distCombined(randomOrder(p-7:p));
             [ignore,idx] = min(dists); %#ok
             bestOf8Route = rtes(idx,:);
             bestOf8Break = brks(idx,:);
@@ -423,8 +406,7 @@ function varargout = mtspof_ga_bases(varargin)
     optSolution = cell(nSalesmen,1);
     rng = [[1 optBreak+1];[optBreak n]]';
     for s = 1:nSalesmen
-        e = N-s+1;
-        optSolution{s} = [s optRoute(rng(s,1):rng(s,2)) e];
+        optSolution{s} = optRoute([rng(s,1):rng(s,2) rng(s,1)]);
     end
     
     
@@ -436,41 +418,29 @@ function varargout = mtspof_ga_bases(varargin)
         %
         % Plots
         %
-        figure('Name','MTSPOF_GA_BASES | Results','Numbertitle','off');
+        figure('Name','MTSP_GA_COMBO | Results','Numbertitle','off');
         subplot(2,2,1);
         if (dims > 2), plot3(xy(:,1),xy(:,2),xy(:,3),'.','Color',pclr);
         else, plot(xy(:,1),xy(:,2),'.','Color',pclr); end
-        hold on
-        for s = 1:nSalesmen
-            e = N-s+1;
-            if (dims > 2), plot3(xy(s,1),xy(s,2),xy(s,3),'s','Color',clr(s,:));
-            else, plot(xy(s,1),xy(s,2),'s','Color',clr(s,:)); end
-            if (dims > 2), plot3(xy(e,1),xy(e,2),xy(e,3),'o','Color',clr(s,:));
-            else, plot(xy(e,1),xy(e,2),'o','Color',clr(s,:)); end
-        end
         title('City Locations');
         subplot(2,2,2);
-        s = (1:nSalesmen);
-        e = N-s+1;
-        imagesc(dmat([s optRoute e],[s optRoute e]));
+        imagesc(dmat(optRoute,optRoute));
         title('Distance Matrix');
         subplot(2,2,3);
         for s = 1:nSalesmen
-            e = N-s+1;
             rte = optSolution{s};
             if (dims > 2), plot3(xy(rte,1),xy(rte,2),xy(rte,3),'.-','Color',clr(s,:));
             else, plot(xy(rte,1),xy(rte,2),'.-','Color',clr(s,:)); end
-            hold on;
-            if (dims > 2), plot3(xy(s,1),xy(s,2),xy(s,3),'s','Color',clr(s,:));
-            else, plot(xy(s,1),xy(s,2),'s','Color',clr(s,:)); end
-            if (dims > 2), plot3(xy(e,1),xy(e,2),xy(e,3),'o','Color',clr(s,:));
-            else, plot(xy(e,1),xy(e,2),'o','Color',clr(s,:)); end
             title(sprintf('Total Distance = %1.4f',minDist));
+            hold on;
         end
         subplot(2,2,4);
-        plot(distHistory,'b','LineWidth',2);
+        plot(distHistory,'g','LineWidth',2);
+        hold on
+        plot(totalDistHistory,'b','LineWidth',2);
+        plot(maxIndividualDistHistory,'r','LineWidth',2);
         title('Best Solution History');
-        set(gca,'XLim',[0 numIter+1],'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'XLim',[0 numIter+1],'YLim',[0 1.1*max([1 totalDistHistory])]);
     end
     
     

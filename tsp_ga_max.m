@@ -97,6 +97,7 @@ function varargout = tsp_ga_max(varargin)
     defaultConfig.popSize     = 100;
     defaultConfig.numIter     = 1e4;
     defaultConfig.showProg    = true;
+    defaultConfig.showStatus  = true;
     defaultConfig.showResult  = true;
     defaultConfig.showWaitbar = false;
     
@@ -131,6 +132,7 @@ function varargout = tsp_ga_max(varargin)
     popSize     = configStruct.popSize;
     numIter     = configStruct.numIter;
     showProg    = configStruct.showProg;
+    showStatus  = configStruct.showStatus;
     showResult  = configStruct.showResult;
     showWaitbar = configStruct.showWaitbar;
     if isempty(dmat)
@@ -157,6 +159,7 @@ function varargout = tsp_ga_max(varargin)
     popSize     = 4*ceil(popSize/4);
     numIter     = max(1,round(real(numIter(1))));
     showProg    = logical(showProg(1));
+    showStatus  = logical(showStatus(1));
     showResult  = logical(showResult(1));
     showWaitbar = logical(showWaitbar(1));
     
@@ -187,15 +190,20 @@ function varargout = tsp_ga_max(varargin)
     % Run the GA
     %
     globalMax = 0;
-    distHistory = zeros(1,numIter);
+    distHistory = NaN(1,numIter);
     tmpPop = zeros(4,n);
     newPop = zeros(popSize,n);
+    [isStopped,isCancelled] = deal(false);
     if showProg
-        figure('Name','TSP_GA_MAX | Current Best Solution','Numbertitle','off');
+        hFig = figure('Name','TSP_GA_MAX | Current Best Solution','Numbertitle','off');
         hAx = gca;
+        if showStatus
+            [hStatus,isCancelled] = figstatus(0,numIter,[],hFig);
+        end
     end
     if showWaitbar
-        hWait = waitbar(0,'Searching for near-optimal solution ...');
+        hWait = waitbar(0,'Searching for near-optimal solution ...', ...
+            'CreateCancelBtn',@cancel_search);
     end
     for iter = 1:numIter
         
@@ -247,6 +255,17 @@ function varargout = tsp_ga_max(varargin)
         
         
         %
+        % Update the status bar and check cancellation status
+        %
+        if showProg && showStatus && ~mod(iter,ceil(numIter/100))
+            [hStatus,isCancelled] = figstatus(iter,numIter,hStatus,hFig);
+        end
+        if (isStopped || isCancelled)
+            break
+        end
+        
+        
+        %
         % MODIFY THE POPULATION
         %   This section of code invokes the genetic algorithm operators.
         %   In this implementation, solutions are randomly assigned to groups
@@ -290,8 +309,11 @@ function varargout = tsp_ga_max(varargin)
         end
         
     end
+    if showProg && showStatus
+        figstatus(numIter,numIter,hStatus,hFig);
+    end
     if showWaitbar
-        close(hWait);
+        delete(hWait);
     end
     
     
@@ -301,6 +323,10 @@ function varargout = tsp_ga_max(varargin)
     index = find(optRoute == 1,1);
     optSolution = [optRoute([index:n 1:index-1]) 1];
     
+    
+    %
+    % Show the final results
+    %
     if showResult
         
         %
@@ -356,10 +382,19 @@ function varargout = tsp_ga_max(varargin)
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
             'plotMatrix',  plotMatrix, ...
+            'distHistory', distHistory, ...
             'maxDist',     maxDist);
         
         varargout = {resultStruct};
         
+    end
+    
+    
+    %
+    % Nested function to cancel search
+    %
+    function cancel_search(varargin)
+        isStopped = true;
     end
     
 end
