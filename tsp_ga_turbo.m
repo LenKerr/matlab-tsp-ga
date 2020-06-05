@@ -84,8 +84,7 @@
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
-% Release: 3.0
-% Release Date: 05/01/2014
+%
 function varargout = tsp_ga_turbo(varargin)
     
     
@@ -113,7 +112,7 @@ function varargout = tsp_ga_turbo(varargin)
         try
             userConfig = struct(varargin{:});
         catch
-            error('Expected inputs are either a structure or parameter/value pairs');
+            error('??? Expected inputs are either a structure or parameter/value pairs');
         end
     end
     
@@ -148,7 +147,7 @@ function varargout = tsp_ga_turbo(varargin)
     [N,dims] = size(xy);
     [nr,nc] = size(dmat);
     if (N ~= nr) || (N ~= nc)
-        error('Invalid XY or DMAT inputs!')
+        error('??? Invalid XY or DMAT inputs')
     end
     n = N;
     
@@ -290,7 +289,7 @@ function varargout = tsp_ga_turbo(varargin)
             %
             bestRoute = pop(index,:);
             for p = 3:3:popSize
-                routeInsertionPoints = sort(ceil(n*rand(1,2)));
+                routeInsertionPoints = sort(randperm(n,2));
                 I = routeInsertionPoints(1);
                 J = routeInsertionPoints(2);
                 for k = 1:3 % Mutate the Best to get Three New Routes

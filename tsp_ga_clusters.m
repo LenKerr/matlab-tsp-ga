@@ -80,8 +80,7 @@
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
-% Release: 3.0
-% Release Date: 05/01/2014
+%
 function varargout = tsp_ga_clusters(varargin)
     
     
@@ -110,7 +109,7 @@ function varargout = tsp_ga_clusters(varargin)
         try
             userConfig = struct(varargin{:});
         catch
-            error('Expected inputs are either a structure or parameter/value pairs');
+            error('??? Expected inputs are either a structure or parameter/value pairs');
         end
     end
     
@@ -135,7 +134,7 @@ function varargout = tsp_ga_clusters(varargin)
     showWaitbar = configStruct.showWaitbar;
     if isempty(xy) || isempty(clusters)
         nClusters = 15; nDims = 2;
-        unitsPerCluster = floor(5*rand(nClusters,1))+3;
+        unitsPerCluster = randi([3 7],nClusters,1);
         nUnits = sum(unitsPerCluster);
         xyCluster = 90*rand(nClusters,nDims);
         clusters = cell(nClusters,1);
@@ -176,7 +175,7 @@ function varargout = tsp_ga_clusters(varargin)
     [N,dims] = size(xy);
     [nr,nc] = size(dmat);
     if (N ~= nr) || (N ~= nc) || (N ~= nUnits)
-        error('Invalid XY, DMAT, or CLUSTER inputs!')
+        error('??? Invalid XY, DMAT, or CLUSTER inputs')
     end
     n = nClusters;
     
@@ -320,7 +319,7 @@ function varargout = tsp_ga_clusters(varargin)
             dists = totalDist(randomOrder(p-3:p));
             [ignore,idx] = min(dists); %#ok
             bestOf4Route = rtes(idx,:);
-            routeInsertionPoints = sort(ceil(n*rand(1,2)));
+            routeInsertionPoints = sort(randperm(n,2));
             I = routeInsertionPoints(1);
             J = routeInsertionPoints(2);
             for k = 1:4 % Mutate the best to get three new routes

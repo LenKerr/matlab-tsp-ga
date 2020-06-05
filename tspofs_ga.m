@@ -88,8 +88,7 @@
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
-% Release: 2.0
-% Release Date: 05/01/2014
+%
 function varargout = tspofs_ga(varargin)
     
     
@@ -117,7 +116,7 @@ function varargout = tspofs_ga(varargin)
         try
             userConfig = struct(varargin{:});
         catch
-            error('Expected inputs are either a structure or parameter/value pairs');
+            error('??? Expected inputs are either a structure or parameter/value pairs');
         end
     end
     
@@ -152,7 +151,7 @@ function varargout = tspofs_ga(varargin)
     [N,dims] = size(xy);
     [nr,nc] = size(dmat);
     if (N ~= nr) || (N ~= nc)
-        error('Invalid XY or DMAT inputs!')
+        error('??? Invalid XY or DMAT inputs')
     end
     n = N - 1; % Separate start city
     
@@ -289,7 +288,7 @@ function varargout = tspofs_ga(varargin)
             dists = totalDist(randomOrder(p-3:p));
             [ignore,idx] = min(dists); %#ok
             bestOf4Route = rtes(idx,:);
-            routeInsertionPoints = sort(ceil(n*rand(1,2)));
+            routeInsertionPoints = sort(randperm(n,2));
             I = routeInsertionPoints(1);
             J = routeInsertionPoints(2);
             for k = 1:4 % Mutate the best to get three new routes

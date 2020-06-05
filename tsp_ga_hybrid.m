@@ -84,8 +84,7 @@
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
-% Release: 3.0
-% Release Date: 05/01/2014
+%
 function varargout = tsp_ga_hybrid(varargin)
     
     
@@ -113,7 +112,7 @@ function varargout = tsp_ga_hybrid(varargin)
         try
             userConfig = struct(varargin{:});
         catch
-            error('Expected inputs are either a structure or parameter/value pairs');
+            error('??? Expected inputs are either a structure or parameter/value pairs');
         end
     end
     
@@ -148,7 +147,7 @@ function varargout = tsp_ga_hybrid(varargin)
     [N,dims] = size(xy);
     [nr,nc] = size(dmat);
     if (N ~= nr) || (N ~= nc)
-        error('Invalid XY or DMAT inputs!')
+        error('??? Invalid XY or DMAT inputs')
     end
     n = N;
     
@@ -270,20 +269,24 @@ function varargout = tsp_ga_hybrid(varargin)
         %   This section of code invokes the genetic algorithm operators.
         %   In this implementation, solutions are randomly assigned to groups
         %   of four and the best solution is kept (tournament selection).
-        %   The best-of-four solution is then mutated 3 different ways
-        %   (flip, swap, and slide). There is also a crossover operator that
-        %   is used in the beginning (for half of the iterations) to help
-        %   faciliate major route changes.
+        %   A crossover operator is used for the first half of the iterations
+        %   to help facilitate major route changes. For the remainder of the
+        %   iterations, the best-of-four solution is mutated 3 different ways
+        %   (flip, swap, and slide).
         %
         randomOrder = randperm(popSize);
         for p = 4:4:popSize
             rtes = pop(randomOrder(p-3:p),:);
             dists = totalDist(randomOrder(p-3:p));
-            if iter < numIter/2 % Use Cross Over and Mutation
+            if (iter < numIter/2) % Use Cross Over and Mutation
+                
+                %
+                % Find the parents
+                %
                 [ignore,ord] = sort(dists); %#ok
                 father = rtes(ord(1),:);
                 mother = rtes(ord(2),:);
-                routeInsertionPoints = sort(ceil(n*rand(1,2)));
+                routeInsertionPoints = sort(randperm(n,2));
                 I = routeInsertionPoints(1);
                 J = routeInsertionPoints(2);
                 len = J - I + 1;
@@ -306,7 +309,7 @@ function varargout = tsp_ga_hybrid(varargin)
                 % Mutate One of the Children
                 %
                 mutant = childOne;
-                routeInsertionPoints = sort(ceil(n*rand(1,2)));
+                routeInsertionPoints = sort(randperm(n,2));
                 I = routeInsertionPoints(1);
                 J = routeInsertionPoints(2);
                 mutant(I:J) = mutant(J:-1:I);
@@ -316,10 +319,12 @@ function varargout = tsp_ga_hybrid(varargin)
                 % Pass the Best Parent, the Children, and the Mutant to the Next Generation
                 %
                 newPop(p-3:p,:) = [father; childOne; childTwo; mutant];
+                
             else % Use Mutation Only
+                
                 [ignore,idx] = min(dists); %#ok
                 bestOf4Route = rtes(idx,:);
-                routeInsertionPoints = sort(ceil(n*rand(1,2)));
+                routeInsertionPoints = sort(randperm(n,2));
                 I = routeInsertionPoints(1);
                 J = routeInsertionPoints(2);
                 for k = 1:4 % Mutate the best to get three new routes

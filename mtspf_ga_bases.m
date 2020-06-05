@@ -98,8 +98,7 @@
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
-% Release: 2.0
-% Release Date: 05/01/2014
+%
 function varargout = mtspf_ga_bases(varargin)
     
     
@@ -129,7 +128,7 @@ function varargout = mtspf_ga_bases(varargin)
         try
             userConfig = struct(varargin{:});
         catch
-            error('Expected inputs are either a structure or parameter/value pairs');
+            error('??? Expected inputs are either a structure or parameter/value pairs');
         end
     end
     
@@ -166,7 +165,7 @@ function varargout = mtspf_ga_bases(varargin)
     [N,dims] = size(xy);
     [nr,nc] = size(dmat);
     if (N ~= nr) || (N ~= nc)
-        error('Invalid XY or DMAT inputs!')
+        error('??? Invalid XY or DMAT inputs')
     end
     n = N - nSalesmen;
     
@@ -362,7 +361,7 @@ function varargout = mtspf_ga_bases(varargin)
             [ignore,idx] = min(dists); %#ok
             bestOf8Route = rtes(idx,:);
             bestOf8Break = brks(idx,:);
-            routeInsertionPoints = sort(ceil(n*rand(1,2)));
+            routeInsertionPoints = sort(randperm(n,2));
             I = routeInsertionPoints(1);
             J = routeInsertionPoints(2);
             for k = 1:8 % Generate new solutions
@@ -511,7 +510,7 @@ function varargout = mtspf_ga_bases(varargin)
             breaks = sort(tmpBreaks(1:nBreaks));
         else % Force breaks to be at least the minimum tour length
             nAdjust = find(rand < cumProb,1)-1;
-            spaces = ceil(nBreaks*rand(1,nAdjust));
+            spaces = randi(nBreaks,1,nAdjust);
             adjust = zeros(1,nBreaks);
             for kk = 1:nBreaks
                 adjust(kk) = sum(spaces == kk);

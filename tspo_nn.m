@@ -79,8 +79,7 @@
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
-% Release: 2.0
-% Release Date: 05/01/2014
+%
 function varargout = tspo_nn(varargin)
     
     
@@ -107,7 +106,7 @@ function varargout = tspo_nn(varargin)
         try
             userConfig = struct(varargin{:});
         catch
-            error('Expected inputs are either a structure or parameter/value pairs');
+            error('??? Expected inputs are either a structure or parameter/value pairs');
         end
     end
     
@@ -141,7 +140,7 @@ function varargout = tspo_nn(varargin)
     [N,dims] = size(xy);
     [nr,nc] = size(dmat);
     if (N ~= nr) || (N ~= nc)
-        error('Invalid XY or DMAT inputs!')
+        error('??? Invalid XY or DMAT inputs')
     end
     n = N;
     
