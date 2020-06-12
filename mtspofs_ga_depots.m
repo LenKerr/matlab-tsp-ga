@@ -89,7 +89,7 @@
 %     userConfig = struct('showProg',false,'showResult',false,'showWaitbar',true);
 %     resultStruct = mtspofs_ga_depots(userConfig);
 %
-% See also: mtsp_ga, mtspf_ga, mtspof_ga, mtspofs_ga, mtspv_ga, distmat
+% See also: mtsp_ga, mtspf_ga, mtspof_ga, mtspofs_ga, mtspv_ga
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
@@ -249,9 +249,10 @@ function varargout = mtspofs_ga_depots(varargin)
     newPopRoute = zeros(popSize,n);
     newPopBreak = zeros(popSize,nBreaks);
     newPopDepot = zeros(popSize,nSalesmen);
-    [isStopped,isCancelled] = deal(false);
+    [isClosed,isStopped,isCancelled] = deal(false);
     if showProg
-        hFig = figure('Name','MTSPOFS_GA_DEPOTS | Current Best Solution','Numbertitle','off');
+        hFig = figure('Name','MTSPOFS_GA_DEPOTS | Current Best Solution', ...
+            'Numbertitle','off','CloseRequestFcn',@close_request);
         hAx = gca;
         if showStatus
             [hStatus,isCancelled] = figstatus(0,numIter,[],hFig);
@@ -261,6 +262,7 @@ function varargout = mtspofs_ga_depots(varargin)
         hWait = waitbar(0,'Searching for near-optimal solution ...', ...
             'CreateCancelBtn',@cancel_search);
     end
+    isRunning = true;
     for iter = 1:numIter
         
         %
@@ -450,6 +452,20 @@ function varargout = mtspofs_ga_depots(varargin)
     if showWaitbar
         delete(hWait);
     end
+    isRunning = false;
+    if isClosed
+        delete(hFig);
+    end
+    
+    
+    %
+    % Append prior distance history if present
+    %
+    if isfield(userConfig,'distHistory')
+        priorHistory = userConfig.distHistory;
+        isNan = isnan(priorHistory);
+        distHistory = [priorHistory(~isNan) distHistory];
+    end
     
     
     %
@@ -468,7 +484,7 @@ function varargout = mtspofs_ga_depots(varargin)
     if showResult
         
         %
-        % Plots
+        % Plot the GA results
         %
         figure('Name','MTSPOFS_GA_DEPOTS | Results','Numbertitle','off');
         subplot(2,2,1);
@@ -502,7 +518,7 @@ function varargout = mtspofs_ga_depots(varargin)
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2);
         title('Best Solution History');
-        set(gca,'XLim',[0 numIter+1],'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'YLim',[0 1.1*max([1 distHistory])]);
     end
     
     
@@ -514,10 +530,11 @@ function varargout = mtspofs_ga_depots(varargin)
         %
         % Create anonymous functions for plot generation
         %
-        plotPoints = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
-        plotResult = @(s)cellfun(@(s,i)plot(s.xy(i,1),s.xy(i,2),'.-', ...
+        plotPoints  = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
+        plotResult  = @(s)cellfun(@(s,i)plot(s.xy(i,1),s.xy(i,2),'.-', ...
             'Color',rand(1,3)),repmat({s},size(s.optSolution)),s.optSolution);
-        plotMatrix = @(s)imagesc(s.dmat(cat(2,s.optSolution{:}),cat(2,s.optSolution{:})));
+        plotHistory = @(s)plot(s.distHistory,'b-','LineWidth',2);
+        plotMatrix  = @(s)imagesc(s.dmat(cat(2,s.optSolution{:}),cat(2,s.optSolution{:})));
         
         
         %
@@ -539,6 +556,7 @@ function varargout = mtspofs_ga_depots(varargin)
             'optSolution', {optSolution}, ...
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
+            'plotHistory', plotHistory, ...
             'plotMatrix',  plotMatrix, ...
             'distHistory', distHistory, ...
             'minDist',     minDist);
@@ -580,6 +598,18 @@ function varargout = mtspofs_ga_depots(varargin)
     %
     function cancel_search(varargin)
         isStopped = true;
+    end
+    
+    
+    %
+    % Nested function to close the figure window
+    %
+    function close_request(varargin)
+        if isRunning
+            [isClosed,isStopped] = deal(true);
+        else
+            delete(hFig);
+        end
     end
     
 end

@@ -80,7 +80,7 @@
 %     userConfig = struct('showProg',false,'showResult',false,'showWaitbar',true);
 %     resultStruct = tspo_ga_turbo(userConfig);
 %
-% See also: tsp_ga, tsp_nn, tspof_ga, tspofs_ga, distmat
+% See also: tsp_ga, tsp_nn, tspof_ga, tspofs_ga
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
@@ -194,9 +194,10 @@ function varargout = tspo_ga_turbo(varargin)
     fullHistory = zeros(popSize,numIter);
     tmpPop = zeros(3,n);
     newPop = zeros(popSize,n);
-    [isStopped,isCancelled] = deal(false);
+    [isClosed,isStopped,isCancelled] = deal(false);
     if showProg
-        hFig = figure('Name','TSPO_GA_TURBO | Current Best Solution','Numbertitle','off');
+        hFig = figure('Name','TSPO_GA_TURBO | Current Best Solution', ...
+            'Numbertitle','off','CloseRequestFcn',@close_request);
         hAx = gca;
         if showStatus
             [hStatus,isCancelled] = figstatus(0,numIter,[],hFig);
@@ -207,6 +208,7 @@ function varargout = tspo_ga_turbo(varargin)
             'CreateCancelBtn',@cancel_search);
     end
     nSame = 0;
+    isRunning = true;
     for iter = 1:numIter
         
         %
@@ -324,6 +326,20 @@ function varargout = tspo_ga_turbo(varargin)
     if showWaitbar
         delete(hWait);
     end
+    isRunning = false;
+    if isClosed
+        delete(hFig);
+    end
+    
+    
+    %
+    % Append prior distance history if present
+    %
+    if isfield(userConfig,'distHistory')
+        priorHistory = userConfig.distHistory;
+        isNan = isnan(priorHistory);
+        distHistory = [priorHistory(~isNan) distHistory];
+    end
     
     
     %
@@ -332,7 +348,7 @@ function varargout = tspo_ga_turbo(varargin)
     if showResult
         
         %
-        % Plots the GA Results
+        % Plot the GA results
         %
         figure('Name','TSPO_GA_TURBO | Results','Numbertitle','off');
         subplot(2,2,1);
@@ -350,7 +366,7 @@ function varargout = tspo_ga_turbo(varargin)
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2);
         title('Best Solution History');
-        set(gca,'XLim',[0 numIter+1],'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'YLim',[0 1.1*max([1 distHistory])]);
     end
     
     
@@ -362,9 +378,10 @@ function varargout = tspo_ga_turbo(varargin)
         %
         % Create anonymous functions for plot generation
         %
-        plotPoints = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
-        plotResult = @(s)plot(s.xy(s.optSolution,1),s.xy(s.optSolution,2),'r.-');
-        plotMatrix = @(s)imagesc(s.dmat(s.optSolution,s.optSolution));
+        plotPoints  = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
+        plotResult  = @(s)plot(s.xy(s.optSolution,1),s.xy(s.optSolution,2),'r.-');
+        plotHistory = @(s)plot(s.distHistory,'b-','LineWidth',2);
+        plotMatrix  = @(s)imagesc(s.dmat(s.optSolution,s.optSolution));
         
         
         %
@@ -382,6 +399,7 @@ function varargout = tspo_ga_turbo(varargin)
             'optSolution', optRoute, ...
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
+            'plotHistory', plotHistory, ...
             'plotMatrix',  plotMatrix, ...
             'distHistory', distHistory, ...
             'minDist',     globalMin);
@@ -396,6 +414,18 @@ function varargout = tspo_ga_turbo(varargin)
     %
     function cancel_search(varargin)
         isStopped = true;
+    end
+    
+    
+    %
+    % Nested function to close the figure window
+    %
+    function close_request(varargin)
+        if isRunning
+            [isClosed,isStopped] = deal(true);
+        else
+            delete(hFig);
+        end
     end
     
 end

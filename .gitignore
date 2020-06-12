@@ -1,0 +1,29 @@
+##############
+### MATLAB ###
+##############
+
+# Autosave extensions
+*.asv
+*.m~
+
+# MAT Files
+*.mat
+
+# FIG Files
+*.fig
+
+# P Files
+*.p
+
+###############
+### Windows ###
+###############
+
+# Windows image file caches
+Thumbs.db
+
+# Folder config file
+Desktop.ini
+
+# Windows shortcuts
+*.lnk

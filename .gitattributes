@@ -1,0 +1,9 @@
+#
+# Always use LF by default
+#
+* text eol=lf
+
+#
+# These files are binary and should be left untouched
+#
+*.pdf binary

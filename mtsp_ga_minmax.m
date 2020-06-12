@@ -93,7 +93,7 @@
 %     userConfig = struct('showProg',false,'showResult',false,'showWaitbar',true);
 %     resultStruct = mtsp_ga_minmax(userConfig);
 %
-% See also: tsp_ga, mtspf_ga, mtspo_ga, mtspof_ga, mtspofs_ga, mtspv_ga, distmat
+% See also: tsp_ga, mtspf_ga, mtspo_ga, mtspof_ga, mtspofs_ga, mtspv_ga
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
@@ -243,9 +243,10 @@ function varargout = mtsp_ga_minmax(varargin)
     tmpPopBreak = zeros(8,nBreaks);
     newPopRoute = zeros(popSize,n);
     newPopBreak = zeros(popSize,nBreaks);
-    [isStopped,isCancelled] = deal(false);
+    [isClosed,isStopped,isCancelled] = deal(false);
     if showProg
-        hFig = figure('Name','MTSP_GA_MINMAX | Current Best Solution','Numbertitle','off');
+        hFig = figure('Name','MTSP_GA_MINMAX | Current Best Solution', ...
+            'Numbertitle','off','CloseRequestFcn',@close_request);
         hAx = gca;
         if showStatus
             [hStatus,isCancelled] = figstatus(0,numIter,[],hFig);
@@ -255,6 +256,7 @@ function varargout = mtsp_ga_minmax(varargin)
         hWait = waitbar(0,'Searching for near-optimal solution ...', ...
             'CreateCancelBtn',@cancel_search);
     end
+    isRunning = true;
     for iter = 1:numIter
         
         %
@@ -384,6 +386,20 @@ function varargout = mtsp_ga_minmax(varargin)
     if showWaitbar
         delete(hWait);
     end
+    isRunning = false;
+    if isClosed
+        delete(hFig);
+    end
+    
+    
+    %
+    % Append prior distance history if present
+    %
+    if isfield(userConfig,'distHistory')
+        priorHistory = userConfig.distHistory;
+        isNan = isnan(priorHistory);
+        distHistory = [priorHistory(~isNan) distHistory];
+    end
     
     
     %
@@ -402,7 +418,7 @@ function varargout = mtsp_ga_minmax(varargin)
     if showResult
         
         %
-        % Plots
+        % Plot the GA results
         %
         figure('Name','MTSP_GA_MINMAX | Results','Numbertitle','off');
         subplot(2,2,1);
@@ -423,7 +439,7 @@ function varargout = mtsp_ga_minmax(varargin)
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2);
         title('Best Solution History');
-        set(gca,'XLim',[0 numIter+1],'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'YLim',[0 1.1*max([1 distHistory])]);
     end
     
     
@@ -435,10 +451,11 @@ function varargout = mtsp_ga_minmax(varargin)
         %
         % Create anonymous functions for plot generation
         %
-        plotPoints = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
-        plotResult = @(s)cellfun(@(s,i)plot(s.xy(i,1),s.xy(i,2),'.-', ...
+        plotPoints  = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
+        plotResult  = @(s)cellfun(@(s,i)plot(s.xy(i,1),s.xy(i,2),'.-', ...
             'Color',rand(1,3)),repmat({s},size(s.optSolution)),s.optSolution);
-        plotMatrix = @(s)imagesc(s.dmat(cat(2,s.optSolution{:}),cat(2,s.optSolution{:})));
+        plotHistory = @(s)plot(s.distHistory,'b-','LineWidth',2);
+        plotMatrix  = @(s)imagesc(s.dmat(cat(2,s.optSolution{:}),cat(2,s.optSolution{:})));
         
         
         %
@@ -459,6 +476,7 @@ function varargout = mtsp_ga_minmax(varargin)
             'optSolution', {optSolution}, ...
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
+            'plotHistory', plotHistory, ...
             'plotMatrix',  plotMatrix, ...
             'distHistory', distHistory, ...
             'minDist',     minDist);
@@ -492,6 +510,18 @@ function varargout = mtsp_ga_minmax(varargin)
     %
     function cancel_search(varargin)
         isStopped = true;
+    end
+    
+    
+    %
+    % Nested function to close the figure window
+    %
+    function close_request(varargin)
+        if isRunning
+            [isClosed,isStopped] = deal(true);
+        else
+            delete(hFig);
+        end
     end
     
 end

@@ -75,7 +75,7 @@
 %     userConfig = struct('showProg',false,'showResult',false,'showWaitbar',true);
 %     resultStruct = tspo_nn(userConfig);
 %
-% See also: tsp_ga, tspo_ga, tspof_ga, tspofs_ga, distmat
+% See also: tsp_ga, tspo_ga, tspof_ga, tspofs_ga
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
@@ -165,9 +165,10 @@ function varargout = tspo_nn(varargin)
     % Run the NN
     %
     distHistory = NaN(1,popSize);
-    [isStopped,isCancelled] = deal(false);
+    [isClosed,isStopped,isCancelled] = deal(false);
     if showProg
-        hFig = figure('Name','TSPO_NN | Current Solution','Numbertitle','off');
+        hFig = figure('Name','TSPO_NN | Current Solution', ...
+            'Numbertitle','off','CloseRequestFcn',@close_request);
         hAx = gca;
         if showStatus
             [hStatus,isCancelled] = figstatus(0,popSize,[],hFig);
@@ -177,6 +178,7 @@ function varargout = tspo_nn(varargin)
         hWait = waitbar(0,'Searching for near-optimal solution ...', ...
             'CreateCancelBtn',@cancel_search);
     end
+    isRunning = true;
     for p = 1:popSize
         d = 0;
         thisRte = zeros(1,n);
@@ -234,6 +236,10 @@ function varargout = tspo_nn(varargin)
     if showWaitbar
         delete(hWait);
     end
+    isRunning = false;
+    if isClosed
+        delete(hFig);
+    end
     
     
     %
@@ -247,11 +253,11 @@ function varargout = tspo_nn(varargin)
     % Show the final results
     %
     if showResult
-        if showProg
-            
-            %
-            % Plot the best route
-            %
+        
+        %
+        % Plot the best route
+        %
+        if showProg && ~isClosed
             if (dims > 2), plot3(hAx,xy(optRoute,1),xy(optRoute,2),xy(optRoute,3),'r.-');
             else, plot(hAx,xy(optRoute,1),xy(optRoute,2),'r.-'); end
             title(hAx,sprintf('Total Distance = %1.4f',minDist));
@@ -288,9 +294,10 @@ function varargout = tspo_nn(varargin)
         %
         % Create anonymous functions for plot generation
         %
-        plotPoints = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
-        plotResult = @(s)plot(s.xy(s.optSolution,1),s.xy(s.optSolution,2),'r.-');
-        plotMatrix = @(s)imagesc(s.dmat(s.optSolution,s.optSolution));
+        plotPoints  = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
+        plotResult  = @(s)plot(s.xy(s.optSolution,1),s.xy(s.optSolution,2),'r.-');
+        plotHistory = @(s)plot(s.distHistory,'b-','LineWidth',2);
+        plotMatrix  = @(s)imagesc(s.dmat(s.optSolution,s.optSolution));
         
         
         %
@@ -307,6 +314,7 @@ function varargout = tspo_nn(varargin)
             'optSolution', optRoute, ...
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
+            'plotHistory', plotHistory, ...
             'plotMatrix',  plotMatrix, ...
             'distHistory', distHistory, ...
             'minDist',     minDist, ...
@@ -322,6 +330,18 @@ function varargout = tspo_nn(varargin)
     %
     function cancel_search(varargin)
         isStopped = true;
+    end
+    
+    
+    %
+    % Nested function to close the figure window
+    %
+    function close_request(varargin)
+        if isRunning
+            [isClosed,isStopped] = deal(true);
+        else
+            delete(hFig);
+        end
     end
     
 end

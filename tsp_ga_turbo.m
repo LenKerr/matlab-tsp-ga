@@ -80,7 +80,7 @@
 %     userConfig = struct('showProg',false,'showResult',false,'showWaitbar',true);
 %     resultStruct = tsp_ga_turbo(userConfig);
 %
-% See also: mtsp_ga, tsp_nn, tspo_ga, tspof_ga, tspofs_ga, distmat
+% See also: mtsp_ga, tsp_nn, tspo_ga, tspof_ga, tspofs_ga
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
@@ -91,7 +91,7 @@ function varargout = tsp_ga_turbo(varargin)
     %
     % Initialize default configuration
     %
-    defaultConfig.xy          = 10*rand(200,2);
+    defaultConfig.xy          = 10*rand(100,2);
     defaultConfig.dmat        = [];
     defaultConfig.popSize     = 100;
     defaultConfig.numIter     = 1e4;
@@ -194,9 +194,10 @@ function varargout = tsp_ga_turbo(varargin)
     fullHistory = zeros(popSize,numIter);
     tmpPop = zeros(3,n);
     newPop = zeros(popSize,n);
-    [isStopped,isCancelled] = deal(false);
+    [isClosed,isStopped,isCancelled] = deal(false);
     if showProg
-        hFig = figure('Name','TSP_GA_TURBO | Current Best Solution','Numbertitle','off');
+        hFig = figure('Name','TSP_GA_TURBO | Current Best Solution', ...
+            'Numbertitle','off','CloseRequestFcn',@close_request);
         hAx = gca;
         if showStatus
             [hStatus,isCancelled] = figstatus(0,numIter,[],hFig);
@@ -207,6 +208,7 @@ function varargout = tsp_ga_turbo(varargin)
             'CreateCancelBtn',@cancel_search);
     end
     nSame = 0;
+    isRunning = true;
     for iter = 1:numIter
         
         %
@@ -325,10 +327,24 @@ function varargout = tsp_ga_turbo(varargin)
     if showWaitbar
         delete(hWait);
     end
+    isRunning = false;
+    if isClosed
+        delete(hFig);
+    end
     
     
     %
-    % Format the Optimal Solution
+    % Append prior distance history if present
+    %
+    if isfield(userConfig,'distHistory')
+        priorHistory = userConfig.distHistory;
+        isNan = isnan(priorHistory);
+        distHistory = [priorHistory(~isNan) distHistory];
+    end
+    
+    
+    %
+    % Format the optimal solution
     %
     index = find(optRoute == 1,1);
     optSolution = [optRoute([index:n 1:index-1]) 1];
@@ -340,7 +356,7 @@ function varargout = tsp_ga_turbo(varargin)
     if showResult
         
         %
-        % Plots the GA Results
+        % Plot the GA results
         %
         figure('Name','TSP_GA_TURBO | Results','Numbertitle','off');
         subplot(2,2,1);
@@ -359,7 +375,7 @@ function varargout = tsp_ga_turbo(varargin)
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2);
         title('Best Solution History');
-        set(gca,'XLim',[0 numIter+1],'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'YLim',[0 1.1*max([1 distHistory])]);
     end
     
     
@@ -371,9 +387,10 @@ function varargout = tsp_ga_turbo(varargin)
         %
         % Create anonymous functions for plot generation
         %
-        plotPoints = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
-        plotResult = @(s)plot(s.xy(s.optSolution,1),s.xy(s.optSolution,2),'r.-');
-        plotMatrix = @(s)imagesc(s.dmat(s.optSolution,s.optSolution));
+        plotPoints  = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
+        plotResult  = @(s)plot(s.xy(s.optSolution,1),s.xy(s.optSolution,2),'r.-');
+        plotHistory = @(s)plot(s.distHistory,'b-','LineWidth',2);
+        plotMatrix  = @(s)imagesc(s.dmat(s.optSolution,s.optSolution));
         
         
         %
@@ -391,6 +408,7 @@ function varargout = tsp_ga_turbo(varargin)
             'optSolution', optSolution, ...
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
+            'plotHistory', plotHistory, ...
             'plotMatrix',  plotMatrix, ...
             'distHistory', distHistory, ...
             'minDist',     globalMin);
@@ -405,6 +423,18 @@ function varargout = tsp_ga_turbo(varargin)
     %
     function cancel_search(varargin)
         isStopped = true;
+    end
+    
+    
+    %
+    % Nested function to close the figure window
+    %
+    function close_request(varargin)
+        if isRunning
+            [isClosed,isStopped] = deal(true);
+        else
+            delete(hFig);
+        end
     end
     
 end

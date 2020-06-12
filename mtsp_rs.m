@@ -1,26 +1,19 @@
-% MTSPOF_GA Fixed Open Multiple Traveling Salesmen Problem (M-TSP) Genetic Algorithm (GA)
-%   Finds a (near) optimal solution to a variation of the "open" M-TSP by
-%   setting up a GA to search for the shortest route (least distance needed
-%   for each salesman to travel from the start location to unique
-%   individual cities and finally to the end location)
+% MTSP_RS Multiple Traveling Salesmen Problem (M-TSP) Random Search (RS) Algorithm
+%   The Random Search algorithm generates random solutions and evaluates
+%   their fitness
 %
 % Summary:
-%     1. Each salesman starts at the first point, and ends at the last
-%        point, but travels to a unique set of cities in between (none of
-%        them close their loops by returning to their starting points)
-%     2. Except for the first and last, each city is visited by exactly one salesman
-%
-% Note: The Fixed Start is taken to be the first XY point and the Fixed End
-%     is taken to be the last XY point
+%     1. Each salesman travels to a unique set of cities and completes the
+%        route by returning to the city he started from
+%     2. Each city is visited by exactly one salesman
 %
 % Input:
 %     USERCONFIG (structure) with zero or more of the following fields:
 %     - XY (float) is an Nx2 matrix of city locations, where N is the number of cities
 %     - DMAT (float) is an NxN matrix of city-to-city distances or costs
 %     - NSALESMEN (scalar integer) is the number of salesmen to visit the cities
-%     - MINTOUR (scalar integer) is the minimum tour length for any of the
-%         salesmen, NOT including the start point or end point
-%     - POPSIZE (scalar integer) is the size of the population (should be divisible by 8)
+%     - MINTOUR (scalar integer) is the minimum tour length for any of the salesmen
+%     - POPSIZE (scalar integer) is the size of the population (should be <= N)
 %     - NUMITER (scalar integer) is the number of desired iterations for the algorithm to run
 %     - SHOWPROG (scalar logical) shows the GA progress if true
 %     - SHOWRESULT (scalar logical) shows the GA results if true
@@ -41,36 +34,36 @@
 %
 % Route/Breakpoint Details:
 %     If there are 10 cities and 3 salesmen, a possible route/break
-%     combination might be: rte = [5 6 9 4 2 8 3 7], brks = [3 7]
-%     Taken together, these represent the solution [1 5 6 9 10][1 4 2 8 3 10][1 7 10],
+%     combination might be: rte = [5 6 9 1 4 2 8 10 3 7], brks = [3 7]
+%     Taken together, these represent the solution [5 6 9][1 4 2 8][10 3 7],
 %     which designates the routes for the 3 salesmen as follows:
-%         . Salesman 1 travels from city 1 to 5 to 6 to 9 to 10
-%         . Salesman 2 travels from city 1 to 4 to 2 to 8 to 3 to 10
-%         . Salesman 3 travels from city 1 to 7 to 10
+%         . Salesman 1 travels from city 5 to 6 to 9 and back to 5
+%         . Salesman 2 travels from city 1 to 4 to 2 to 8 and back to 1
+%         . Salesman 3 travels from city 10 to 3 to 7 and back to 10
 %
 % Usage:
-%     mtspof_ga
+%     mtsp_rs
 %       -or-
-%     mtspof_ga(userConfig)
+%     mtsp_rs(userConfig)
 %       -or-
-%     resultStruct = mtspof_ga;
+%     resultStruct = mtsp_rs;
 %       -or-
-%     resultStruct = mtspof_ga(userConfig);
+%     resultStruct = mtsp_rs(userConfig);
 %       -or-
-%     [...] = mtspof_ga('Param1',Value1,'Param2',Value2, ...);
+%     [...] = mtsp_rs('Param1',Value1,'Param2',Value2, ...);
 %
 % Example:
 %     % Let the function create an example problem to solve
-%     mtspof_ga;
+%     mtsp_rs;
 %
 % Example:
 %     % Request the output structure from the solver
-%     resultStruct = mtspof_ga;
+%     resultStruct = mtsp_rs;
 %
 % Example:
 %     % Pass a random set of user-defined XY points to the solver
 %     userConfig = struct('xy',10*rand(35,2));
-%     resultStruct = mtspof_ga(userConfig);
+%     resultStruct = mtsp_rs(userConfig);
 %
 % Example:
 %     % Pass a more interesting set of XY points to the solver
@@ -81,40 +74,35 @@
 %     [x,y] = pol2cart(theta(:),rho(:));
 %     xy = 10*([x y]-min([x;y]))/(max([x;y])-min([x;y]));
 %     userConfig = struct('xy',xy);
-%     resultStruct = mtspof_ga(userConfig);
+%     resultStruct = mtsp_rs(userConfig);
 %
 % Example:
 %     % Pass a random set of 3D (XYZ) points to the solver
 %     xyz = 10*rand(35,3);
 %     userConfig = struct('xy',xyz);
-%     resultStruct = mtspof_ga(userConfig);
-%
-% Example:
-%     % Change the defaults for GA population size and number of iterations
-%     userConfig = struct('popSize',200,'numIter',1e4);
-%     resultStruct = mtspof_ga(userConfig);
+%     resultStruct = mtsp_rs(userConfig);
 %
 % Example:
 %     % Turn off the plots but show a waitbar
 %     userConfig = struct('showProg',false,'showResult',false,'showWaitbar',true);
-%     resultStruct = mtspof_ga(userConfig);
+%     resultStruct = mtsp_rs(userConfig);
 %
-% See also: mtsp_ga, mtspf_ga, mtspo_ga, mtspofs_ga, mtspv_ga
+% See also: mtsp_ga, tsp_ga, tsp_rs
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
 %
-function varargout = mtspof_ga(varargin)
+function varargout = mtsp_rs(varargin)
     
     
     %
     % Initialize default configuration
     %
-    defaultConfig.xy          = 10*rand(40,2);
+    defaultConfig.xy          = 10*rand(30,2);
     defaultConfig.dmat        = [];
     defaultConfig.nSalesmen   = 5;
-    defaultConfig.minTour     = 1;
-    defaultConfig.popSize     = 80;
+    defaultConfig.minTour     = 3;
+    defaultConfig.popSize     = Inf;
     defaultConfig.numIter     = 5e3;
     defaultConfig.showProg    = true;
     defaultConfig.showStatus  = true;
@@ -172,7 +160,7 @@ function varargout = mtspof_ga(varargin)
     if (N ~= nr) || (N ~= nc)
         error('??? Invalid XY or DMAT inputs')
     end
-    n = N - 2; % Separate start and end cities
+    n = N;
     
     
     %
@@ -180,7 +168,7 @@ function varargout = mtspof_ga(varargin)
     %
     nSalesmen   = max(1,min(n,round(real(nSalesmen(1)))));
     minTour     = max(1,min(floor(n/nSalesmen),round(real(minTour(1)))));
-    popSize     = max(8,8*ceil(popSize(1)/8));
+    popSize     = max(1,min(n,round(real(popSize(1)))));
     numIter     = max(1,round(real(numIter(1))));
     showProg    = logical(showProg(1));
     showStatus  = logical(showStatus(1));
@@ -205,10 +193,10 @@ function varargout = mtspof_ga(varargin)
     %
     popRoute = zeros(popSize,n);         % population of routes
     popBreak = zeros(popSize,nBreaks);   % population of breaks
-    popRoute(1,:) = (1:n) + 1;
+    popRoute(1,:) = (1:n);
     popBreak(1,:) = rand_breaks();
     for k = 2:popSize
-        popRoute(k,:) = randperm(n) + 1;
+        popRoute(k,:) = randperm(n);
         popBreak(k,:) = rand_breaks();
     end
     
@@ -240,20 +228,13 @@ function varargout = mtspof_ga(varargin)
     
     
     %
-    % Run the GA
+    % Run the Random Search (RS)
     %
-    row = zeros(popSize,n+nSalesmen);
-    col = zeros(popSize,n+nSalesmen);
-    isValid = false(1,n+nSalesmen);
     globalMin = Inf;
     distHistory = NaN(1,numIter);
-    tmpPopRoute = zeros(8,n);
-    tmpPopBreak = zeros(8,nBreaks);
-    newPopRoute = zeros(popSize,n);
-    newPopBreak = zeros(popSize,nBreaks);
     [isClosed,isStopped,isCancelled] = deal(false);
     if showProg
-        hFig = figure('Name','MTSPOF_GA | Current Best Solution', ...
+        hFig = figure('Name','MTSP_RS | Current Best Solution', ...
             'Numbertitle','off','CloseRequestFcn',@close_request);
         hAx = gca;
         if showStatus
@@ -282,25 +263,19 @@ function varargout = mtspof_ga(varargin)
         %         pBreak = popBreak(p,:);
         %         rng = [[1 pBreak+1];[pBreak n]]';
         %         for s = 1:nSalesmen
-        %             d = d + dmat(1,pRoute(rng(s,1)));
+        %             d = d + dmat(pRoute(rng(s,2)),pRoute(rng(s,1)));
         %             for k = rng(s,1):rng(s,2)-1
         %                 d = d + dmat(pRoute(k),pRoute(k+1));
         %             end
-        %             d = d + dmat(pRoute(rng(s,2)),N);
         %         end
         %         totalDist(p) = d;
         %     end
         %
+        row = popRoute;
+        col = popRoute(:,[2:n 1]);
         for p = 1:popSize
             brk = popBreak(p,:);
-            isValid(:) = false;
-            isValid([1 brk+(2:nSalesmen)]) = true;
-            row(p,isValid) = 1;
-            row(p,~isValid) = popRoute(p,:);
-            isValid(:) = false;
-            isValid([brk+(1:nSalesmen-1) n+nSalesmen]) = true;
-            col(p,isValid) = N;
-            col(p,~isValid) = popRoute(p,:);
+            col(p,[brk n]) = row(p,[1 brk+1]);
         end
         ind = N*(col-1) + row;
         totalDist = sum(dmat(ind),2);
@@ -324,15 +299,10 @@ function varargout = mtspof_ga(varargin)
                 % Plot the best route
                 %
                 for s = 1:nSalesmen
-                    rte = [1 optRoute(rng(s,1):rng(s,2)) N];
+                    rte = optRoute([rng(s,1):rng(s,2) rng(s,1)]);
                     if (dims > 2), plot3(hAx,xy(rte,1),xy(rte,2),xy(rte,3),'.-','Color',clr(s,:));
                     else, plot(hAx,xy(rte,1),xy(rte,2),'.-','Color',clr(s,:)); end
                     hold(hAx,'on');
-                end
-                if (dims > 2), plot3(hAx,xy(1,1),xy(1,2),xy(1,3),'o','Color',pclr);
-                    plot3(hAx,xy(N,1),xy(N,2),xy(N,3),'o','Color',pclr);
-                else, plot(hAx,xy(1,1),xy(1,2),'o','Color',pclr);
-                    plot(hAx,xy(N,1),xy(N,2),'o','Color',pclr);
                 end
                 title(hAx,sprintf('Total Distance = %1.4f, Iteration = %d',minDist,iter));
                 hold(hAx,'off');
@@ -354,55 +324,14 @@ function varargout = mtspof_ga(varargin)
         
         %
         % MODIFY THE POPULATION
-        %   This section of code invokes the genetic algorithm operators.
-        %   In this implementation, solutions are randomly assigned to groups
-        %   of eight and the best solution is kept (tournament selection).
-        %   The best-of-eight solution is then mutated 3 different ways
-        %   (flip, swap, and slide) and the four resulting solutions are
-        %   then copied but assigned different break points to complete the
-        %   group of eight. There is no crossover operator because it tends
-        %   to be highly destructive and rarely improves a decent solution.
+        %   This section of code randomly searches for new solutions
         %
-        randomOrder = randperm(popSize);
-        for p = 8:8:popSize
-            rtes = popRoute(randomOrder(p-7:p),:);
-            brks = popBreak(randomOrder(p-7:p),:);
-            dists = totalDist(randomOrder(p-7:p));
-            [ignore,idx] = min(dists); %#ok
-            bestOf8Route = rtes(idx,:);
-            bestOf8Break = brks(idx,:);
-            routeInsertionPoints = sort(randperm(n,2));
-            I = routeInsertionPoints(1);
-            J = routeInsertionPoints(2);
-            for k = 1:8 % Generate new solutions
-                tmpPopRoute(k,:) = bestOf8Route;
-                tmpPopBreak(k,:) = bestOf8Break;
-                switch k
-                    case 2 % Flip
-                        tmpPopRoute(k,I:J) = tmpPopRoute(k,J:-1:I);
-                    case 3 % Swap
-                        tmpPopRoute(k,[I J]) = tmpPopRoute(k,[J I]);
-                    case 4 % Slide
-                        tmpPopRoute(k,I:J) = tmpPopRoute(k,[I+1:J I]);
-                    case 5 % Modify breaks
-                        tmpPopBreak(k,:) = rand_breaks();
-                    case 6 % Flip, modify breaks
-                        tmpPopRoute(k,I:J) = tmpPopRoute(k,J:-1:I);
-                        tmpPopBreak(k,:) = rand_breaks();
-                    case 7 % Swap, modify breaks
-                        tmpPopRoute(k,[I J]) = tmpPopRoute(k,[J I]);
-                        tmpPopBreak(k,:) = rand_breaks();
-                    case 8 % Slide, modify breaks
-                        tmpPopRoute(k,I:J) = tmpPopRoute(k,[I+1:J I]);
-                        tmpPopBreak(k,:) = rand_breaks();
-                    otherwise % Do nothing
-                end
-            end
-            newPopRoute(p-7:p,:) = tmpPopRoute;
-            newPopBreak(p-7:p,:) = tmpPopBreak;
+        popRoute(1,:) = optRoute;
+        popBreak(1,:) = optBreak;
+        for k = 2:popSize
+            popRoute(k,:) = randperm(n);
+            popBreak(k,:) = rand_breaks();
         end
-        popRoute = newPopRoute;
-        popBreak = newPopBreak;
         
         
         %
@@ -441,7 +370,7 @@ function varargout = mtspof_ga(varargin)
     optSolution = cell(nSalesmen,1);
     rng = [[1 optBreak+1];[optBreak n]]';
     for s = 1:nSalesmen
-        optSolution{s} = [1 optRoute(rng(s,1):rng(s,2)) N];
+        optSolution{s} = optRoute([rng(s,1):rng(s,2) rng(s,1)]);
     end
     
     
@@ -453,13 +382,13 @@ function varargout = mtspof_ga(varargin)
         %
         % Plot the GA results
         %
-        figure('Name','MTSPOF_GA | Results','Numbertitle','off');
+        figure('Name','MTSP_RS | Results','Numbertitle','off');
         subplot(2,2,1);
         if (dims > 2), plot3(xy(:,1),xy(:,2),xy(:,3),'.','Color',pclr);
         else, plot(xy(:,1),xy(:,2),'.','Color',pclr); end
         title('City Locations');
         subplot(2,2,2);
-        imagesc(dmat([1 optRoute N],[1 optRoute N]));
+        imagesc(dmat(optRoute,optRoute));
         title('Distance Matrix');
         subplot(2,2,3);
         for s = 1:nSalesmen
@@ -468,11 +397,6 @@ function varargout = mtspof_ga(varargin)
             else, plot(xy(rte,1),xy(rte,2),'.-','Color',clr(s,:)); end
             title(sprintf('Total Distance = %1.4f',minDist));
             hold on;
-        end
-        if (dims > 2), plot3(xy(1,1),xy(1,2),xy(1,3),'o','Color',pclr);
-            plot3(xy(N,1),xy(N,2),xy(N,3),'o','Color',pclr);
-        else, plot(xy(1,1),xy(1,2),'o','Color',pclr);
-            plot(xy(N,1),xy(N,2),'o','Color',pclr);
         end
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2);

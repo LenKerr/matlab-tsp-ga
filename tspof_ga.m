@@ -85,7 +85,7 @@
 %     userConfig = struct('showProg',false,'showResult',false,'showWaitbar',true);
 %     resultStruct = tspof_ga(userConfig);
 %
-% See also: tsp_ga, tsp_nn, tspo_ga, tspofs_ga, distmat
+% See also: tsp_ga, tsp_nn, tspo_ga, tspofs_ga
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
@@ -197,9 +197,10 @@ function varargout = tspof_ga(varargin)
     distHistory = NaN(1,numIter);
     tmpPop = zeros(4,n);
     newPop = zeros(popSize,n);
-    [isStopped,isCancelled] = deal(false);
+    [isClosed,isStopped,isCancelled] = deal(false);
     if showProg
-        hFig = figure('Name','TSPOF_GA | Current Best Solution','Numbertitle','off');
+        hFig = figure('Name','TSPOF_GA | Current Best Solution', ...
+            'Numbertitle','off','CloseRequestFcn',@close_request);
         hAx = gca;
         if showStatus
             [hStatus,isCancelled] = figstatus(0,numIter,[],hFig);
@@ -209,6 +210,7 @@ function varargout = tspof_ga(varargin)
         hWait = waitbar(0,'Searching for near-optimal solution ...', ...
             'CreateCancelBtn',@cancel_search);
     end
+    isRunning = true;
     for iter = 1:numIter
         
         %
@@ -324,6 +326,20 @@ function varargout = tspof_ga(varargin)
     if showWaitbar
         delete(hWait);
     end
+    isRunning = false;
+    if isClosed
+        delete(hFig);
+    end
+    
+    
+    %
+    % Append prior distance history if present
+    %
+    if isfield(userConfig,'distHistory')
+        priorHistory = userConfig.distHistory;
+        isNan = isnan(priorHistory);
+        distHistory = [priorHistory(~isNan) distHistory];
+    end
     
     
     %
@@ -355,7 +371,7 @@ function varargout = tspof_ga(varargin)
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2);
         title('Best Solution History');
-        set(gca,'XLim',[0 numIter+1],'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'YLim',[0 1.1*max([1 distHistory])]);
     end
     
     
@@ -367,9 +383,10 @@ function varargout = tspof_ga(varargin)
         %
         % Create anonymous functions for plot generation
         %
-        plotPoints = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
-        plotResult = @(s)plot(s.xy(s.optSolution,1),s.xy(s.optSolution,2),'r.-');
-        plotMatrix = @(s)imagesc(s.dmat(s.optSolution,s.optSolution));
+        plotPoints  = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
+        plotResult  = @(s)plot(s.xy(s.optSolution,1),s.xy(s.optSolution,2),'r.-');
+        plotHistory = @(s)plot(s.distHistory,'b-','LineWidth',2);
+        plotMatrix  = @(s)imagesc(s.dmat(s.optSolution,s.optSolution));
         
         
         %
@@ -387,6 +404,7 @@ function varargout = tspof_ga(varargin)
             'optSolution', [1 optRoute N], ...
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
+            'plotHistory', plotHistory, ...
             'plotMatrix',  plotMatrix, ...
             'distHistory', distHistory, ...
             'minDist',     minDist);
@@ -401,6 +419,18 @@ function varargout = tspof_ga(varargin)
     %
     function cancel_search(varargin)
         isStopped = true;
+    end
+    
+    
+    %
+    % Nested function to close the figure window
+    %
+    function close_request(varargin)
+        if isRunning
+            [isClosed,isStopped] = deal(true);
+        else
+            delete(hFig);
+        end
     end
     
 end

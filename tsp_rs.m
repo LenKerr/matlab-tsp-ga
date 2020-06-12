@@ -74,7 +74,7 @@
 %     userConfig = struct('showProg',false,'showResult',false,'showWaitbar',true);
 %     resultStruct = tsp_rs(userConfig);
 %
-% See also: tsp_rs, tspo_ga, tspof_ga, tspofs_ga, distmat
+% See also: tsp_ga, tspo_ga, tspof_ga, tspofs_ga
 %
 % Author: Joseph Kirk
 % Email: jdkirk630@gmail.com
@@ -168,13 +168,26 @@ function varargout = tsp_rs(varargin)
     
     
     %
-    % Run the GA
+    % Seed the algorithm with a previous result if available
+    %
+    if isfield(userConfig,'optRoute')
+        optRoute = userConfig.optRoute;
+        isValid = isequal(pop(1,:),sort(optRoute));
+        if isValid
+            pop(1,:) = optRoute;
+        end
+    end
+    
+    
+    %
+    % Run the Random Search (RS)
     %
     globalMin = Inf;
     distHistory = NaN(1,numIter);
-    [isStopped,isCancelled] = deal(false);
+    [isClosed,isStopped,isCancelled] = deal(false);
     if showProg
-        hFig = figure('Name','TSP_RS | Current Best Solution','Numbertitle','off');
+        hFig = figure('Name','TSP_RS | Current Best Solution', ...
+            'Numbertitle','off','CloseRequestFcn',@close_request);
         hAx = gca;
         if showStatus
             [hStatus,isCancelled] = figstatus(0,numIter,[],hFig);
@@ -184,10 +197,11 @@ function varargout = tsp_rs(varargin)
         hWait = waitbar(0,'Searching for near-optimal solution ...', ...
             'CreateCancelBtn',@cancel_search);
     end
+    isRunning = true;
     for iter = 1:numIter
         
         %
-        % FITNESS EVALUATION
+        % EVALUATE SOLUTIONS
         %   This section of code computes the total cost of each solution
         %   in the population. The actual code that gets executed uses a
         %   much faster (vectorized) method to calculate the route lengths
@@ -268,6 +282,20 @@ function varargout = tsp_rs(varargin)
     if showWaitbar
         delete(hWait);
     end
+    isRunning = false;
+    if isClosed
+        delete(hFig);
+    end
+    
+    
+    %
+    % Append prior distance history if present
+    %
+    if isfield(userConfig,'distHistory')
+        priorHistory = userConfig.distHistory;
+        isNan = isnan(priorHistory);
+        distHistory = [priorHistory(~isNan) distHistory];
+    end
     
     
     %
@@ -283,7 +311,7 @@ function varargout = tsp_rs(varargin)
     if showResult
         
         %
-        % Plot the GA results
+        % Plot the RS results
         %
         figure('Name','TSP_RS | Results','Numbertitle','off');
         subplot(2,2,1);
@@ -295,14 +323,14 @@ function varargout = tsp_rs(varargin)
         imagesc(dmat(optRoute,optRoute));
         title('Distance Matrix');
         subplot(2,2,3);
-        rte = optRoute([1:n 1]);
+        rte = optSolution;
         if (dims > 2), plot3(xy(rte,1),xy(rte,2),xy(rte,3),'r.-');
         else, plot(xy(rte,1),xy(rte,2),'r.-'); end
         title(sprintf('Total Distance = %1.4f',minDist));
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2);
         title('Best Solution History');
-        set(gca,'XLim',[0 numIter+1],'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'YLim',[0 1.1*max([1 distHistory])]);
     end
     
     
@@ -314,9 +342,10 @@ function varargout = tsp_rs(varargin)
         %
         % Create anonymous functions for plot generation
         %
-        plotPoints = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
-        plotResult = @(s)plot(s.xy(s.optSolution,1),s.xy(s.optSolution,2),'r.-');
-        plotMatrix = @(s)imagesc(s.dmat(s.optSolution,s.optSolution));
+        plotPoints  = @(s)plot(s.xy(:,1),s.xy(:,2),'.','Color',~get(gca,'Color'));
+        plotResult  = @(s)plot(s.xy(s.optSolution,1),s.xy(s.optSolution,2),'r.-');
+        plotHistory = @(s)plot(s.distHistory,'b-','LineWidth',2);
+        plotMatrix  = @(s)imagesc(s.dmat(s.optSolution,s.optSolution));
         
         
         %
@@ -333,6 +362,7 @@ function varargout = tsp_rs(varargin)
             'optSolution', optSolution, ...
             'plotPoints',  plotPoints, ...
             'plotResult',  plotResult, ...
+            'plotHistory', plotHistory, ...
             'plotMatrix',  plotMatrix, ...
             'distHistory', distHistory, ...
             'minDist',     minDist, ...
@@ -348,6 +378,18 @@ function varargout = tsp_rs(varargin)
     %
     function cancel_search(varargin)
         isStopped = true;
+    end
+    
+    
+    %
+    % Nested function to close the figure window
+    %
+    function close_request(varargin)
+        if isRunning
+            [isClosed,isStopped] = deal(true);
+        else
+            delete(hFig);
+        end
     end
     
 end
