@@ -49,7 +49,7 @@ Functions in this toolbox are listed below with short descriptions
 * `get_config` - Helper function to support a variety of input options (structure or name/value pairs)
 
 ## Notes about Custom GA
-The custom Genetic Algorithm used by most of the functions in this toolbox does not use crossover and mutation operators in the traditional sense, because the crossover operator tends to be a highly destructive operator and rarely improves the best solution. Instead, three different mutation operators (flip, swap, and slide) are used -- see [TSPGA-Mutation-Descriptions.pdf] for more details.
+The custom Genetic Algorithm used by most of the functions in this toolbox does not use crossover and mutation operators in the traditional sense, because the crossover operator tends to be a highly destructive operator and rarely improves the best solution. Instead, three different mutation operators (*flip*, *swap*, and *slide*) are used -- see `TSPGA-Mutation-Descriptions.pdf` for more details.
 
 ## Features
 The solvers in this toolbox have several (hopefully useful) features:
