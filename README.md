@@ -37,8 +37,8 @@ Functions in this toolbox are listed below with short descriptions
 * `mtsp_ga_max` - Solves a variation of the M-TSP that *maximizes* the total distance
 * `mtsp_ga_minsum` - Same as `mtsp_ga` (just named such that objective function is explicit)
 * `mtsp_ga_minmax` - Solves the classic M-TSP except the objective function minimizes the maximum tour (which tends to make tour lengths more equitable)
-* `mtsp_ga_combo` - Solves the classic M-TSP except the objective function is a combination of <minmax> and <minsum>
-* `mtspf_ga_minmax` - Solves the ``mtspf_ga` variation, but with the <minmax> objective function
+* `mtsp_ga_combo` - Solves the classic M-TSP except the objective function is a combination of *minmax* and *minsum*
+* `mtspf_ga_minmax` - Solves the `mtspf_ga` variation, but with the *minmax* objective function
 * `mtsp_ga_turbo` - Solves the M-TSP with a variation of the GA that increases the mutation rate on the best route
 * `mtspv_ga` - Solves a variation of `mtsp_ga` that also optimizes the number of salesmen
 * `mtspvf_ga` - Solves a variation of `mtspf_ga` that also optimizes the number of salesmen
