@@ -5,7 +5,7 @@ This toolbox contains MATLAB functions to solve the Traveling Salesman Problem (
 
 [![View Traveling Salesman Problem (TSP) Genetic Algorithm Toolbox on the MATLAB File Exchange](https://www.mathworks.com/matlabcentral/images/matlab-file-exchange.svg)](https://www.mathworks.com/matlabcentral/fileexchange/75525-traveling-salesman-problem-tsp-genetic-algorithm-toolbox)
 
-## TSP/M-TSP and Variations
+## TSP / M-TSP and Variations
 Functions in this toolbox are listed below with short descriptions
 
 * `tsp_ga` - Solves the classic Traveling Salesman Problem (TSP)
@@ -58,7 +58,7 @@ The solvers in this toolbox have several (hopefully useful) features:
 2. The output structure from running any of the GA solvers can be passed back as an input into the solver to continue where it left off
 3. If the plot showing the current best solution is displayed, a status bar is shown across the bottom of the figure with an option to exit early
 4. If the waitbar is used, it also utilizes an option that lets the user exit early if desired
-5. The output structures from the solvers contain fields ("plotPoints", "plotResult", "plotMatrix", and "plotHistory") that hold anonymous functions which can be used as a simple way to view the results (see examples)
+5. The output structures from the solvers contain fields (`plotPoints`, `plotResult`, `plotMatrix`, and `plotHistory`) that hold anonymous functions which can be used as a simple way to view the results (see examples)
 
 ## Examples
 Below are examples demonstrating some of the toolbox features

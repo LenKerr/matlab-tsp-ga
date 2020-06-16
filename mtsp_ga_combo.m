@@ -455,7 +455,7 @@ function varargout = mtsp_ga_combo(varargin)
         plot(totalDistHistory,'b','LineWidth',2);
         plot(maxIndividualDistHistory,'r','LineWidth',2);
         title('Best Solution History');
-        set(gca,'YLim',[0 1.1*max([1 totalDistHistory])]);
+        set(gca,'XLim',[1 length(distHistory)],'YLim',[0 1.1*max([1 totalDistHistory])]);
     end
     
     
@@ -506,9 +506,8 @@ function varargout = mtsp_ga_combo(varargin)
     % Generate random set of break points
     %
     function breaks = rand_breaks()
-        if (minTour == 1) % No Constraints on breaks
-            tmpBreaks = randperm(n-1);
-            breaks = sort(tmpBreaks(1:nBreaks));
+        if (minTour == 1) % No constraints on breaks
+            breaks = sort(randperm(n-1,nBreaks));
         else % Force breaks to be at least the minimum tour length
             nAdjust = find(rand < cumProb,1)-1;
             spaces = randi(nBreaks,1,nAdjust);
@@ -535,6 +534,7 @@ function varargout = mtsp_ga_combo(varargin)
     function close_request(varargin)
         if isRunning
             [isClosed,isStopped] = deal(true);
+            isRunning = false;
         else
             delete(hFig);
         end

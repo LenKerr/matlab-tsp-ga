@@ -159,7 +159,7 @@ function varargout = mtsp_ga_turbo(varargin)
     
     
     %
-    % Verify Inputs
+    % Verify inputs
     %
     [N,dims] = size(xy);
     [nr,nc] = size(dmat);
@@ -170,7 +170,7 @@ function varargout = mtsp_ga_turbo(varargin)
     
     
     %
-    % Sanity Checks
+    % Sanity checks
     %
     nSalesmen   = max(1,min(n,round(real(nSalesmen(1)))));
     minTour     = max(1,min(floor(n/nSalesmen),round(real(minTour(1)))));
@@ -183,7 +183,7 @@ function varargout = mtsp_ga_turbo(varargin)
     
     
     %
-    % Initializations for Route Break Point Selection
+    % Initializations for route break point selection
     %
     nBreaks = nSalesmen-1;
     dof = n - minTour*nSalesmen;          % degrees of freedom
@@ -195,7 +195,7 @@ function varargout = mtsp_ga_turbo(varargin)
     
     
     %
-    % Initialize the Populations
+    % Initialize the populations
     %
     popRoute = zeros(popSize,n);         % population of routes
     popBreak = zeros(popSize,nBreaks);   % population of breaks
@@ -296,7 +296,9 @@ function varargout = mtsp_ga_turbo(varargin)
         
         
         %
-        % Find the Best Route in the Population
+        % SELECT THE BEST
+        %   This section of code finds the best solution in the current
+        %   population and stores it if it is better than the previous best.
         %
         [minDist,index] = min(totalDist);
         fullHistory(:,iter) = sort(totalDist);
@@ -309,7 +311,7 @@ function varargout = mtsp_ga_turbo(varargin)
             if showProg
                 
                 %
-                % Plot the Best Route
+                % Plot the best route
                 %
                 for s = 1:nSalesmen
                     rte = optRoute([rng(s,1):rng(s,2) rng(s,1)]);
@@ -354,7 +356,7 @@ function varargout = mtsp_ga_turbo(varargin)
         else
             
             %
-            % Genetic Algorithm Operators
+            % Genetic Algorithm operators
             %
             bestRoute = popRoute(index,:);
             bestBreak = popBreak(index,:);
@@ -362,7 +364,7 @@ function varargout = mtsp_ga_turbo(varargin)
                 routeInsertionPoints = sort(randperm(n,2));
                 I = routeInsertionPoints(1);
                 J = routeInsertionPoints(2);
-                for k = 1:7 % Generate New Solutions
+                for k = 1:7 % Generate new solutions
                     tmpPopRoute(k,:) = bestRoute;
                     tmpPopBreak(k,:) = bestBreak;
                     switch k
@@ -463,12 +465,12 @@ function varargout = mtsp_ga_turbo(varargin)
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2);
         title('Best Solution History');
-        set(gca,'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'XLim',[1 length(distHistory)],'YLim',[0 1.1*max([1 distHistory])]);
     end
     
     
     %
-    % Return Output
+    % Return output
     %
     if nargout
         
@@ -511,13 +513,12 @@ function varargout = mtsp_ga_turbo(varargin)
     
     
     %
-    % Generate Random Set of Break Points
+    % Generate random set of break points
     %
     function breaks = rand_breaks()
-        if (minTour == 1) % No Constraints on breaks
-            tmpBreaks = randperm(n-1);
-            breaks = sort(tmpBreaks(1:nBreaks));
-        else % Force Breaks to be at Least the Minimum Tour Length
+        if (minTour == 1) % No constraints on breaks
+            breaks = sort(randperm(n-1,nBreaks));
+        else % Force breaks to be at least the minimum tour length
             nAdjust = find(rand < cumProb,1)-1;
             spaces = randi(nBreaks,1,nAdjust);
             adjust = zeros(1,nBreaks);
@@ -543,6 +544,7 @@ function varargout = mtsp_ga_turbo(varargin)
     function close_request(varargin)
         if isRunning
             [isClosed,isStopped] = deal(true);
+            isRunning = false;
         else
             delete(hFig);
         end

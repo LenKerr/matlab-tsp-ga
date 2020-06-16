@@ -142,7 +142,7 @@ function varargout = tsp_ga_turbo(varargin)
     
     
     %
-    % Verify Inputs
+    % Verify inputs
     %
     [N,dims] = size(xy);
     [nr,nc] = size(dmat);
@@ -153,7 +153,7 @@ function varargout = tsp_ga_turbo(varargin)
     
     
     %
-    % Sanity Checks
+    % Sanity checks
     %
     popSize     = 1+3*ceil((popSize-1)/3);
     numIter     = max(1,round(real(numIter(1))));
@@ -164,7 +164,7 @@ function varargout = tsp_ga_turbo(varargin)
     
     
     %
-    % Initialize the Population
+    % Initialize the population
     %
     pop = zeros(popSize,n);
     pop(1,:) = (1:n);
@@ -247,7 +247,7 @@ function varargout = tsp_ga_turbo(varargin)
             if showProg
                 
                 %
-                % Plot the Best Route
+                % Plot the best route
                 %
                 rte = optRoute([1:n 1]);
                 if (dims > 2), plot3(hAx,xy(rte,1),xy(rte,2),xy(rte,3),'r.-');
@@ -287,7 +287,7 @@ function varargout = tsp_ga_turbo(varargin)
         else
             
             %
-            % Genetic Algorithm Operators
+            % Genetic Algorithm operators
             %
             bestRoute = pop(index,:);
             for p = 3:3:popSize
@@ -375,12 +375,12 @@ function varargout = tsp_ga_turbo(varargin)
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2);
         title('Best Solution History');
-        set(gca,'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'XLim',[1 length(distHistory)],'YLim',[0 1.1*max([1 distHistory])]);
     end
     
     
     %
-    % Return Output
+    % Return output
     %
     if nargout
         
@@ -432,6 +432,7 @@ function varargout = tsp_ga_turbo(varargin)
     function close_request(varargin)
         if isRunning
             [isClosed,isStopped] = deal(true);
+            isRunning = false;
         else
             delete(hFig);
         end

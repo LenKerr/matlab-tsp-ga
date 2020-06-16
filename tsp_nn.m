@@ -351,6 +351,7 @@ function varargout = tsp_nn(varargin)
     function close_request(varargin)
         if isRunning
             [isClosed,isStopped] = deal(true);
+            isRunning = false;
         else
             delete(hFig);
         end

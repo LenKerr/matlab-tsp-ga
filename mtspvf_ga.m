@@ -185,6 +185,7 @@ function varargout = mtspvf_ga(varargin)
     %
     % Initialize the populations
     %
+    maxSalesmen = floor(n / minTour);
     popRoute = zeros(popSize,n);	% population of routes
     popBreak = cell(popSize,1);     % population of breaks
     popRoute(1,:) = (1:n) + 1;
@@ -432,7 +433,7 @@ function varargout = mtspvf_ga(varargin)
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2)
         title('Best Solution History');
-        set(gca,'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'XLim',[1 length(distHistory)],'YLim',[0 1.1*max([1 distHistory])]);
     end
     
     
@@ -483,23 +484,27 @@ function varargout = mtspvf_ga(varargin)
     % Generate random set of breaks
     %
     function breaks = rand_breaks()
-        nSalesmen = ceil(floor(n/minTour)*rand);
+        nSalesmen = randi(maxSalesmen);
         nBreaks = nSalesmen - 1;
         breaks = [];
         if nBreaks
-            dof = n - minTour*nSalesmen;    % degrees of freedom
-            addto = ones(1,dof+1);
-            for kk = 2:nBreaks
-                addto = cumsum(addto);
+            if (minTour == 1) % No constraints on breaks
+                breaks = sort(randperm(n-1,nBreaks));
+            else % Force breaks to be at least the minimum tour length
+                dof = n - minTour*nSalesmen;    % degrees of freedom
+                addto = ones(1,dof+1);
+                for kk = 2:nBreaks
+                    addto = cumsum(addto);
+                end
+                cumProb = cumsum(addto)/sum(addto);
+                nAdjust = find(rand < cumProb,1)-1;
+                spaces = randi(nBreaks,1,nAdjust);
+                adjust = zeros(1,nBreaks);
+                for kk = 1:nBreaks
+                    adjust(kk) = sum(spaces == kk);
+                end
+                breaks = minTour*(1:nBreaks) + cumsum(adjust);
             end
-            cumProb = cumsum(addto)/sum(addto);
-            nAdjust = find(rand < cumProb,1)-1;
-            spaces = randi(nBreaks,1,nAdjust);
-            adjust = zeros(1,nBreaks);
-            for kk = 1:nBreaks
-                adjust(kk) = sum(spaces == kk);
-            end
-            breaks = minTour*(1:nBreaks) + cumsum(adjust);
         end
     end
     
@@ -518,6 +523,7 @@ function varargout = mtspvf_ga(varargin)
     function close_request(varargin)
         if isRunning
             [isClosed,isStopped] = deal(true);
+            isRunning = false;
         else
             delete(hFig);
         end

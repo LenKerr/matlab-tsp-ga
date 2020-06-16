@@ -355,7 +355,7 @@ function varargout = tspo_ga(varargin)
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2);
         title('Best Solution History');
-        set(gca,'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'XLim',[1 length(distHistory)],'YLim',[0 1.1*max([1 distHistory])]);
     end
     
     
@@ -412,6 +412,7 @@ function varargout = tspo_ga(varargin)
     function close_request(varargin)
         if isRunning
             [isClosed,isStopped] = deal(true);
+            isRunning = false;
         else
             delete(hFig);
         end

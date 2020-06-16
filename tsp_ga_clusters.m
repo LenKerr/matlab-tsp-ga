@@ -262,10 +262,6 @@ function varargout = tsp_ga_clusters(varargin)
             for k = 2:n
                 A(clusters{pop(p,k-1)},clusters{pop(p,k)}) = true;
             end
-            
-            %
-            % figure(1000);spy(A)
-            %
             dijkstraScore = Inf;
             for iUnit = 1:minUnits
                 iStart = unitStarts(iUnit);
@@ -281,7 +277,9 @@ function varargout = tsp_ga_clusters(varargin)
         
         
         %
-        % Find the best route in the population
+        % SELECT THE BEST
+        %   This section of code finds the best solution in the current
+        %   population and stores it if it is better than the previous best.
         %
         [minDist,index] = min(totalDist);
         distHistory(iter) = minDist;
@@ -306,9 +304,6 @@ function varargout = tsp_ga_clusters(varargin)
                 title(hAx,sprintf('Total Distance = %1.4f, Iteration = %d',minDist,iter));
                 hold(hAx,'off');
                 drawnow;
-                
-                % A = adjacencyHistory{index};
-                % figure(1000);spy(A)
             end
         end
         
@@ -418,7 +413,7 @@ function varargout = tsp_ga_clusters(varargin)
         subplot(2,2,4);
         plot(distHistory,'b','LineWidth',2);
         title('Best Solution History');
-        set(gca,'YLim',[0 1.1*max([1 distHistory])]);
+        set(gca,'XLim',[1 length(distHistory)],'YLim',[0 1.1*max([1 distHistory])]);
         
     end
     
@@ -478,6 +473,7 @@ function varargout = tsp_ga_clusters(varargin)
     function close_request(varargin)
         if isRunning
             [isClosed,isStopped] = deal(true);
+            isRunning = false;
         else
             delete(hFig);
         end
